@@ -1,8 +1,6 @@
 streamlit
-numpy
 pandas
-rasterio
-scipy
 folium
 streamlit-folium
-reportlab
+plotly
+scikit-learn
