@@ -1,6 +1,3 @@
-streamlit
-pandas
-folium
-streamlit-folium
-plotly
-scikit-learn
+import streamlit as st
+import pandas as pd
+import folium
