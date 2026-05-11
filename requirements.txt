@@ -1,6 +1,9 @@
-streamlit
-pandas
-numpy
+fastapi
+uvicorn
+rasterio
+joblib
+scikit-learn
+psycopg2-binary
+simplekml
 folium
 streamlit-folium
-scikit-learn
