@@ -1,7 +1,8 @@
 streamlit
 pandas
 numpy
+scikit-learn
 folium
 streamlit-folium
-simplekml
-plotly
+earthengine-api
+reportlab
