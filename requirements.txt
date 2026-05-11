@@ -1,4 +1,7 @@
-rasterio
-requests
-reportlab
+streamlit
+pandas
+numpy
+folium
+streamlit-folium
 simplekml
+plotly
