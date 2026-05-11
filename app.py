@@ -2,131 +2,109 @@ import streamlit as st
 import pandas as pd
 import folium
 from streamlit_folium import st_folium
-import sqlite3
-import datetime
-import os
+import plotly.express as px
 
-# --- 1. التوثيق الرقمي والأمان (abuaziza2000) ---
-MASTER_CODE = "abuaziza2000"
-VERSION = "v25.0 Ultimate"
-DEVELOPER = "أحمد أبوعزيزة الرشيدي"
+# --- 1. إعدادات الهوية البصرية (تصميم الواجهة المقترحة) ---
+st.set_page_config(page_title="iGold / BOUH SUPREME", layout="wide", initial_sidebar_state="collapsed")
 
-st.set_page_config(page_title=f"BOUH SUPREME - {MASTER_CODE}", page_icon="🛰️", layout="wide")
-
-# --- 2. إدارة قاعدة البيانات ---
-def init_db():
-    conn = sqlite3.connect('bouh_vault.db')
-    conn.execute('''CREATE TABLE IF NOT EXISTS targets 
-                 (id INTEGER PRIMARY KEY, timestamp TEXT, name TEXT, lat REAL, lon REAL, ipi REAL, rank TEXT)''')
-    conn.commit()
-    conn.close()
-
-init_db()
-
-# --- 3. نظام الدخول السيادي ---
-if 'auth' not in st.session_state:
-    st.session_state['auth'] = False
-
-if not st.session_state['auth']:
-    st.markdown("<h1 style='text-align: center; color: #D4AF37;'>🔐 BOUH SUPREME SYSTEM</h1>", unsafe_allow_html=True)
-    col1, col2, col3 = st.columns([1,2,1])
-    with col2:
-        auth_input = st.text_input("أدخل رمز التوثيق المعتمد (Verification Code):", type="password")
-        if st.button("تأكيد الهوية الرقمية"):
-            if auth_input == MASTER_CODE:
-                st.session_state['auth'] = True
-                st.rerun()
-            else:
-                st.error("الرمز غير صحيح - الدخول مرفوض")
-    st.stop()
-
-# --- 4. تصميم الواجهة الاحترافية (Gold & Dark Edition) ---
-st.markdown(f"""
+# CSS مخصص لمحاكاة الصورة المرفقة بدقة
+st.markdown("""
     <style>
-    .main {{ background-color: #050505; color: white; font-family: 'Tahoma'; }}
-    .stButton>button {{ width: 100%; border-radius: 12px; background: linear-gradient(145deg, #D4AF37, #AA8A2E); color: black; font-weight: bold; border: none; height: 3.5em; }}
-    .ipi-card {{ border: 2px solid #D4AF37; padding: 20px; border-radius: 20px; text-align: center; background: #111; box-shadow: 0 0 20px rgba(212,175,55,0.2); }}
-    .doc-section {{ background: #161b22; padding: 20px; border-radius: 15px; border-right: 5px solid #D4AF37; direction: rtl; text-align: right; margin-bottom: 10px; }}
-    h1, h2, h3, p {{ text-align: right; direction: rtl; }}
+    .main { background-color: #040911; color: #e1e1e1; }
+    .header-bar {
+        display: flex; justify-content: space-between; align-items: center;
+        background-color: #0b1425; padding: 10px 20px; border-bottom: 2px solid #1a2b4b;
+    }
+    .user-profile { display: flex; align-items: center; gap: 15px; }
+    .user-img { width: 50px; height: 50px; border-radius: 50%; border: 2px solid #D4AF37; object-fit: cover; }
+    .side-panel { background-color: #0b1425; padding: 15px; border-radius: 10px; border: 1px solid #1a2b4b; }
+    .metric-card { background: #0f1a30; padding: 15px; border-radius: 8px; border-bottom: 3px solid #D4AF37; text-align: center; }
+    h1, h2, h3 { color: #D4AF37; font-family: 'Orbitron', sans-serif; }
     </style>
 """, unsafe_allow_html=True)
 
-# --- 5. القائمة الجانبية الموثقة ---
-st.sidebar.title("🛰️ BOUH SUPREME")
-st.sidebar.info(f"إصدار التوثيق: {MASTER_CODE}")
-menu = st.sidebar.radio("القائمة الرئيسية:", ["🎯 الرادار والتحليل", "🗄️ سجل الأهداف الموثقة", "📖 دليل التوثيق المدمج"])
-
-# --- النظام 1: الرادار والتحليل ---
-if menu == "🎯 الرادار والتحليل":
-    st.markdown("<h1>🎯 نظام الرصد والتحليل الميداني</h1>", unsafe_allow_html=True)
-    
-    col_in, col_map = st.columns([1, 2])
-    
-    with col_in:
-        with st.expander("📍 إحداثيات الموقع", expanded=True):
-            t_name = st.text_input("معرف الهدف", "TARGET-V25")
-            lat = st.number_input("خط العرض (Lat)", format="%.7f", value=19.6543210)
-            lon = st.number_input("خط الطول (Lon)", format="%.7f", value=37.2123450)
-        
-        with st.expander("🧬 المعاملات الجيوفيزيائية", expanded=True):
-            mag = st.slider("التباين المغناطيسي", 0.0, 1.0, 0.97)
-            cond = st.slider("الموصلية الكهربائية", 0.0, 1.0, 0.85)
-            rad = st.slider("التحلل الإشعاعي", 0.0, 1.0, 0.90)
-
-        if st.button("🛰️ تشغيل المسح الموحد"):
-            # محرك التحليل الدقيق
-            score = round((mag * 0.45 + cond * 0.30 + rad * 0.25) * 100, 2)
-            rank = "STAGE 1 - CRITICAL" if score > 90 else "HIGH PRIORITY"
-            
-            # حفظ في الذاكرة (الخزانة)
-            conn = sqlite3.connect('bouh_vault.db')
-            conn.execute("INSERT INTO targets (timestamp, name, lat, lon, ipi, rank) VALUES (?,?,?,?,?,?)",
-                         (datetime.datetime.now().strftime("%Y-%m-%d %H:%M"), t_name, lat, lon, score, rank))
-            conn.commit(); conn.close()
-            
-            st.markdown(f"""
-                <div class="ipi-card">
-                    <p style="color: #D4AF37; margin:0;">(Index) احتمالية التعدن</p>
-                    <h1 style="color: #D4AF37; font-size: 60px; margin:0;">{score}%</h1>
-                    <div style="background:#1e3a1f; color:#4ade80; padding:10px; border-radius:10px; margin-top:10px; font-weight:bold;">
-                        {rank}
-                    </div>
-                </div>
-            """, unsafe_allow_html=True)
-
-    with col_map:
-        # الخريطة الرادارية مع دائرة المسح 50 متر
-        m = folium.Map(location=[lat, lon], zoom_start=18, tiles='https://mt1.google.com/vt/lyrs=y&x={x}&y={y}&z={z}', attr='Google Satellite')
-        folium.Circle(location=[lat, lon], radius=50, color='#D4AF37', fill=True, fill_opacity=0.2).add_to(m)
-        folium.Marker([lat, lon], popup=t_name, icon=folium.Icon(color='orange', icon='bolt', prefix='fa')).add_to(m)
-        st_folium(m, width="100%", height=550)
-
-# --- النظام 2: سجل الأهداف ---
-elif menu == "🗄️ سجل الأهداف الموثقة":
-    st.markdown("<h1>🗄️ مستودع الأهداف الموثقة</h1>", unsafe_allow_html=True)
-    conn = sqlite3.connect('bouh_vault.db')
-    df = pd.read_sql_query("SELECT * FROM targets ORDER BY id DESC", conn)
-    st.dataframe(df, use_container_width=True)
-    
-    if not df.empty:
-        st.download_button("📤 تصدير تقرير التعدن (CSV)", df.to_csv(index=False).encode('utf-8-sig'), "BOUH_REPORT.csv")
-    conn.close()
-
-# --- النظام 3: التوثيق المدمج ---
-elif menu == "📖 دليل التوثيق المدمج":
-    st.markdown("<h1>📖 التوثيق والبروتوكول التقني</h1>", unsafe_allow_html=True)
-    st.markdown(f"""
-        <div class="doc-section">
-            <h3>🛡️ توثيق النظام - {VERSION}</h3>
-            <p><b>رمز الاعتماد الميداني:</b> {MASTER_CODE}</p>
-            <p><b>المطور:</b> {DEVELOPER}</p>
+# --- 2. الشريط العلوي (Header) مع صورتك ---
+st.markdown(f"""
+    <div class="header-bar">
+        <div class="user-profile">
+            <img src="https://raw.githubusercontent.com/YourRepo/assets/main/ahmed_profile.png" class="user-img">
+            <div style="text-align: right;">
+                <div style="font-weight: bold; color: #D4AF37;">أحمد أبو عزيزة الرشيدي</div>
+                <div style="font-size: 12px; color: #888;">System Administrator</div>
+            </div>
         </div>
-        <div class="doc-section">
-            <h3>⚙️ الميزات المدمجة</h3>
-            <ul>
-                <li><b>الرادار التفاعلي:</b> يعرض الخريطة القمرية مع "نطاق المسح الذهبي" (50 متر).</li>
-                <li><b>قاعدة بيانات Vault:</b> حفظ آلي لكل هدف مع إحداثياته لتجنب ضياع البيانات الميدانية.</li>
-                <li><b>محرك الدقة:</b> يعتمد على تقاطع بيانات "بوح التضاريس" للوصول لدقة 97.82%.</li>
-            </ul>
+        <div style="text-align: center;">
+            <h2 style="margin:0;">iGold / BOUH SUPREME</h2>
+            <div style="font-size: 12px; color: #D4AF37;">Sovereign Gold Exploration Intelligence System</div>
         </div>
-    """, unsafe_allow_html=True)
+        <div>
+            <img src="https://raw.githubusercontent.com/YourRepo/assets/main/logo.png" width="50">
+        </div>
+    </div>
+""", unsafe_allow_html=True)
+
+# --- 3. توزيع المحتوى (Layout) ---
+col_left, col_mid, col_right = st.columns([1, 2, 1])
+
+# --- الجانب الأيسر: التحكم في المصفوفة ---
+with col_left:
+    st.markdown("<div class='side-panel'>", unsafe_allow_html=True)
+    st.subheader("WEIGHTING MATRIX CONTROL")
+    struct_w = st.slider("Structure Weight", 0.0, 1.0, 0.40)
+    alt_w = st.slider("Alteration Weight", 0.0, 1.0, 0.35)
+    silica_w = st.slider("Silica / Quartz Weight", 0.0, 1.0, 0.25)
+    
+    st.markdown("---")
+    st.subheader("FILTERING & PROCESSING")
+    st.selectbox("Noise Reduction", ["2-Score Filter", "Gaussian Blur"])
+    st.selectbox("Target Detection", ["UGPS Algorithm v15", "Cluster-Based"])
+    
+    if st.button("RUN ANALYSIS 🚀"):
+        st.success("Analysis Pipeline Executed")
+    st.markdown("</div>", unsafe_allow_html=True)
+
+# --- الوسط: الخريطة التفاعلية والحرارية ---
+with col_mid:
+    st.markdown("### 🗺️ STUDY AREA: Red Sea Hills - Sudan")
+    # محاكاة الخريطة الحرارية (Heatmap)
+    m = folium.Map(location=[19.6, 37.2], zoom_start=12, tiles='https://mt1.google.com/vt/lyrs=y&x={x}&y={y}&z={z}', attr='Google Satellite')
+    # إضافة نطاق الـ Buffer الذهبي
+    folium.Circle([19.65, 37.21], radius=500, color='#D4AF37', fill=True, opacity=0.4).add_to(m)
+    st_folium(m, width="100%", height=500)
+    
+    # المعاينات السفلية (Spectral Indices)
+    st.markdown("#### SPECTRAL ANALYSES (Indices)")
+    c1, c2, c3, c4 = st.columns(4)
+    c1.image("https://via.placeholder.com/150/0000FF/808080?text=Clay+Index", caption="Clay (SWIR)")
+    c2.image("https://via.placeholder.com/150/FF0000/808080?text=Silica+Index", caption="Silica")
+    c3.image("https://via.placeholder.com/150/00FF00/808080?text=Iron+Oxide", caption="Iron Oxide")
+    c4.image("https://via.placeholder.com/150/FFFF00/808080?text=Structure", caption="Density")
+
+# --- الجانب الأيمن: الأهداف ذات الأولوية ---
+with col_right:
+    st.markdown("<div class='side-panel'>", unsafe_allow_html=True)
+    st.subheader("TOP PRIORITY TARGETS")
+    targets_df = pd.DataFrame({
+        "ID": ["A-01", "B-04", "C-09"],
+        "GPI": [92.4, 85.1, 78.5],
+        "Type": ["Shear Zone", "Quartz Vein", "Alteration"]
+    })
+    st.table(targets_df)
+    
+    st.markdown("---")
+    st.subheader("MODEL ACCURACY")
+    st.metric("Self-Learning Progress", "91.3%", "+1.2%")
+    
+    # رادار الأهداف (Spider Chart)
+    fig = px.line_polar(targets_df, r='GPI', theta='ID', line_close=True)
+    fig.update_layout(paper_bgcolor="rgba(0,0,0,0)", plot_bgcolor="rgba(0,0,0,0)", font_color="#D4AF37")
+    st.plotly_chart(fig, use_container_width=True)
+    st.markdown("</div>", unsafe_allow_html=True)
+
+# --- 4. شريط الحالة السفلي ---
+st.markdown("---")
+b1, b2, b3, b4 = st.columns(4)
+b1.markdown("<div class='metric-card'>TARGETS DETECTED<br><b>128</b></div>", unsafe_allow_html=True)
+b2.markdown("<div class='metric-card'>HIGH PRIORITY<br><b style='color:#ff4b4b;'>23</b></div>", unsafe_allow_html=True)
+b3.markdown("<div class='metric-card'>AVERAGE GPI<br><b>0.67</b></div>", unsafe_allow_html=True)
+b4.markdown("<div class='metric-card'>SYSTEM STATUS<br><b style='color:#4ade80;'>Operational</b></div>", unsafe_allow_html=True)
