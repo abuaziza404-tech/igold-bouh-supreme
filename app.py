@@ -6,139 +6,128 @@ from streamlit_folium import st_folium
 import datetime
 import sqlite3
 import json
-import requests
 import os
 from xgboost import XGBClassifier
 
-# --- 1. إعدادات الهوية والواجهة الاحترافية ---
+# --- 1. الإعدادات والتحقق السيادي ---
 LICENSE_KEY = "AHMAD-GOLD-2026-SUPREME"
 DEVELOPER = "أحمد أبوعزيزة الرشيدي"
 DB_PATH = "bouh_master_v21.db"
 
 st.set_page_config(
-    page_title="BOUH SUPREME v21 - PRO",
+    page_title="BOUH SUPREME v21",
     page_icon="🛰️",
-    layout="wide",
-    initial_sidebar_state="expanded"
+    layout="wide"
 )
 
-# تصميم الواجهة بالألوان الخاصة بنخبة التنقيب
+# تحسين واجهة المستخدم بالألوان الذهبية والسوداء
 st.markdown("""
     <style>
-    .main { background-color: #0e1117; }
-    .stButton>button { width: 100%; border-radius: 5px; height: 3em; background-color: #ffd700; color: black; font-weight: bold; }
-    .stMetric { background-color: #1a1c24; padding: 15px; border-radius: 10px; border-left: 5px solid #ffd700; }
-    h1, h2, h3 { color: #ffd700 !important; }
+    .main { background-color: #050505; color: white; }
+    .stButton>button { width: 100%; border-radius: 8px; background-color: #D4AF37; color: black; font-weight: bold; height: 3em; }
+    .stMetric { background-color: #111; padding: 15px; border-radius: 10px; border: 1px solid #D4AF37; }
+    h1, h2, h3 { color: #D4AF37 !important; text-align: right; }
+    div.stMarkdown { text-align: right; }
     </style>
 """, unsafe_allow_html=True)
 
-# --- 2. طبقة الذاكرة وقاعدة البيانات المكانية ---
+# --- 2. إدارة قاعدة البيانات ---
 def init_db():
     conn = sqlite3.connect(DB_PATH)
-    cursor = conn.cursor()
-    cursor.execute("""
-        CREATE TABLE IF NOT EXISTS targets (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            timestamp DATETIME,
-            target_id TEXT,
-            lat REAL,
-            lon REAL,
-            ipi REAL,
-            status TEXT,
-            struct_score REAL,
-            pattern_score REAL,
-            alter_score REAL,
-            geology_check INTEGER
-        )
-    """)
+    conn.execute("""CREATE TABLE IF NOT EXISTS targets 
+        (id INTEGER PRIMARY KEY, timestamp TEXT, name TEXT, lat REAL, lon REAL, ipi REAL, status TEXT)""")
     conn.commit()
     conn.close()
 
 init_db()
 
-# --- 3. محرك BOUH V21 المطور (المعادلات السيادية) ---
-class BouhEngineV21:
-    @staticmethod
-    def calculate_ipi(s, p, a, d=0.5, bio_check=True):
-        # مصفوفة الأوزان: البنية (40%)، النمط (25%)، التحوير (25%)، التضاريس (10%)
-        base_score = (s * 0.40 + p * 0.25 + a * 0.25 + d * 0.10) * 100
-        
-        # شرط حتمي: إذا لم توجد بنية جيولوجية (Shear Zone)، يتم خفض الاحتمالية بنسبة 80%
-        if not bio_check:
-            base_score *= 0.2
-            
-        if base_score >= 80: return round(base_score, 2), "🔴 Stage 1 - هدف سيادي"
-        elif base_score >= 65: return round(base_score, 2), "🟠 احتمالية عالية جداً"
-        elif base_score >= 45: return round(base_score, 2), "🟡 منطقة واعدة"
-        return round(base_score, 2), "⚪ غير مؤكد / استبعاد"
+# --- 3. محرك التحليل BOUH ENGINE ---
+def calculate_ipi(struct, pattern, alter):
+    # معادلة النخبة المدمجة
+    score = (struct * 0.40 + pattern * 0.30 + alter * 0.30) * 100
+    if score >= 85: return round(score, 2), "Stage 1 - تطابق بصمة سيادي"
+    elif score >= 65: return round(score, 2), "احتمالية عالية جداً"
+    return round(score, 2), "منطقة استكشافية"
 
-# --- 4. نظام التحقق من الدخول ---
-if 'auth' not in st.session_state:
-    st.session_state['auth'] = False
+# --- 4. نظام الأمان ---
+if 'authenticated' not in st.session_state:
+    st.session_state['authenticated'] = False
 
-if not st.session_state['auth']:
-    st.title("🛰️ BOUH SUPREME v21 - Sovereign Access")
-    key = st.text_input("Master System Key", type="password")
-    if st.button("Unlock Core Engine"):
-        if key == LICENSE_KEY:
-            st.session_state['auth'] = True
-            st.rerun()
-        else:
-            st.error("Access Denied")
+if not st.session_state['authenticated']:
+    st.title("🔐 نظام الدخول السيادي")
+    col1, col2, col3 = st.columns([1,2,1])
+    with col2:
+        key = st.text_input("أدخل مفتاح النظام Master Key", type="password")
+        if st.button("فتح المحرك Core Unlock"):
+            if key == LICENSE_KEY:
+                st.session_state['authenticated'] = True
+                st.rerun()
+            else:
+                st.error("مفتاح غير صحيح")
     st.stop()
 
-# --- 5. واجهة التحكم الرئيسية ---
+# --- 5. واجهة التشغيل الميدانية ---
 st.sidebar.title("🛰️ BOUH SUPREME v21")
-st.sidebar.markdown(f"**المطور:** {DEVELOPER}")
-menu = st.sidebar.radio("القائمة:", ["🎯 تحليل الأهداف", "🗄️ السجل الجيولوجي", "📦 تصدير GIS"])
+st.sidebar.info(f"المطور: المهندس {DEVELOPER}")
+menu = st.sidebar.radio("القائمة الرئيسية", ["🎯 الرادار والتحليل", "🗄️ سجل الأهداف", "📦 التصدير والـ GIS"])
 
-if menu == "🎯 تحليل الأهداف":
-    st.title("🎯 تحليل الأهداف الميدانية")
-    col1, col2 = st.columns([1, 2])
+if menu == "🎯 الرادار والتحليل":
+    st.markdown("<h1>🎯 الرادار التفاعلي فائق الدقة</h1>", unsafe_allow_html=True)
     
-    with col1:
-        st.subheader("⚙️ الإعدادات الميدانية")
-        t_id = st.text_input("معرف الهدف", "Target_Gold_01")
+    col_in, col_map = st.columns([1, 2])
+    
+    with col_in:
+        st.markdown("### ⚙️ الإعدادات الميدانية")
+        t_name = st.text_input("معرف الهدف", "Target_Gold_Sudan")
         lat = st.number_input("خط العرض", format="%.7f", value=19.6500000)
         lon = st.number_input("خط الطول", format="%.7f", value=37.2100000)
         
         st.markdown("---")
-        is_shear = st.checkbox("وجود بنية جيولوجية (Shear Zone)", value=True)
-        s_score = st.slider("كثافة البنية (Structure)", 0.0, 1.0, 0.75)
-        p_score = st.slider("تركيز النمط (Pattern)", 0.0, 1.0, 0.60)
-        a_score = st.slider("مؤشر التحوير (Alteration)", 0.0, 1.0, 0.50)
+        st.markdown("### 🧬 معاملات التحليل الذكي")
+        s_val = st.slider("كثافة البنية (Structure)", 0.0, 1.0, 0.85)
+        p_val = st.slider("تركيز النمط (Pattern)", 0.0, 1.0, 0.70)
+        a_val = st.slider("مؤشر التحوير (Alteration)", 0.0, 1.0, 0.65)
         
-        if st.button("🚀 بدء تحليل النخبة"):
-            ipi, status = BouhEngineV21.calculate_ipi(s_score, p_score, a_score, bio_check=is_shear)
+        if st.button("🔥 بدء التحليل الجيوفيزيائي"):
+            ipi_val, status_text = calculate_ipi(s_val, p_val, a_val)
             
-            # حفظ في السجل
+            # حفظ في الذاكرة
             conn = sqlite3.connect(DB_PATH)
-            conn.execute("""INSERT INTO targets 
-                (timestamp, target_id, lat, lon, ipi, status, struct_score, pattern_score, alter_score, geology_check) 
-                VALUES (?,?,?,?,?,?,?,?,?,?)""",
-                (datetime.datetime.now(), t_id, lat, lon, ipi, status, s_score, p_score, a_score, 1 if is_shear else 0))
-            conn.commit(); conn.close()
-            st.success(f"النتيجة: {ipi}% | {status}")
+            conn.execute("INSERT INTO targets (timestamp, name, lat, lon, ipi, status) VALUES (?,?,?,?,?,?)",
+                         (datetime.datetime.now().strftime("%Y-%m-%d %H:%M"), t_name, lat, lon, ipi_val, status_text))
+            conn.commit()
+            conn.close()
+            
+            st.metric("(Index) احتمالية التعدن", f"{ipi_val}%", status_text)
 
-    with col2:
-        st.subheader("🌍 الرادار التفاعلي")
-        m = folium.Map(location=[lat, lon], zoom_start=15, 
+    with col_map:
+        m = folium.Map(location=[lat, lon], zoom_start=16, 
                       tiles='https://mt1.google.com/vt/lyrs=y&x={x}&y={y}&z={z}', 
                       attr='Google Hybrid')
-        folium.Marker([lat, lon], popup=f"{t_id}: {status}").add_to(m)
-        st_folium(m, width="100%", height=500)
+        folium.Marker([lat, lon], popup=f"{t_name}: {ipi_val if 'ipi_val' in locals() else ''}%").add_to(m)
+        st_folium(m, width="100%", height=600)
 
-elif menu == "🗄️ السجل الجيولوجي":
-    st.title("🗄️ سجل الأهداف المحفوظة")
+elif menu == "🗄️ سجل الأهداف":
+    st.markdown("<h1>🗄️ الذاكرة الجيولوجية الحقيقية</h1>", unsafe_allow_html=True)
     conn = sqlite3.connect(DB_PATH)
-    df = pd.read_sql_query("SELECT * FROM targets ORDER BY timestamp DESC", conn)
+    df = pd.read_sql_query("SELECT * FROM targets ORDER BY id DESC", conn)
     st.dataframe(df, use_container_width=True)
     conn.close()
 
-elif menu == "📦 تصدير GIS":
-    st.title("📦 تصدير البيانات الاحترافي")
+elif menu == "📦 التصدير والـ GIS":
+    st.markdown("<h1>📦 تصدير البيانات للخرائط</h1>", unsafe_allow_html=True)
     conn = sqlite3.connect(DB_PATH)
     df = pd.read_sql_query("SELECT * FROM targets", conn)
     if not df.empty:
-        st.download_button("📤 تحميل ملف CSV للخريطة", df.to_csv(index=False), "BOUH_Targets.csv")
+        st.download_button("📤 تحميل سجل الأهداف (CSV)", df.to_csv(index=False), "bouh_targets.csv")
+        
+        # تصدير GeoJSON لبرنامج QGIS
+        features = []
+        for _, row in df.iterrows():
+            features.append({
+                "type": "Feature",
+                "geometry": {"type": "Point", "coordinates": [row['lon'], row['lat']]},
+                "properties": {"IPI": row['ipi'], "Status": row['status']}
+            })
+        st.download_button("📤 تصدير ملف GeoJSON (لبرنامج QGIS)", json.dumps({"type": "FeatureCollection", "features": features}), "bouh_qgis.geojson")
     conn.close()
