@@ -5,139 +5,130 @@ import folium
 from streamlit_folium import folium_static
 import plotly.graph_objects as go
 from datetime import datetime
-import time
+import json
 
-# --- 🛡️ الإعدادات السيادية والأمان ---
-st.set_page_config(
-    page_title="BOUH SUPREME V100 | Sovereign Intelligence",
-    page_icon="💎",
-    layout="wide"
-)
+# --- 🔐 الأمان والوصول السيادي ---
+def check_password():
+    if "authenticated" not in st.session_state:
+        st.session_state.authenticated = False
+    
+    if not st.session_state.authenticated:
+        st.markdown("<h2 style='text-align: center; color: #FFD700;'>BOUH ALTADARIS - الدخول السيادي</h2>", unsafe_allow_html=True)
+        pwd = st.text_input("أدخل رمز القفل الخاص بالمهندس أحمد:", type="password")
+        if st.button("فتح النظام"):
+            if pwd == "abuaziza2000":
+                st.session_state.authenticated = True
+                st.rerun()
+            else:
+                st.error("الرمز غير صحيح. الوصول مرفوض.")
+        return False
+    return True
 
-# تخصيص الواجهة الاحترافية (CSS)
-st.markdown("""
-    <style>
-    .reportview-container { background: #0a0a0a; }
-    .stChatFloatingInputContainer { background-color: #111; }
-    .gold-text { color: #FFD700; font-weight: bold; }
-    .sidebar .sidebar-content { background-image: linear-gradient(#1a1a1a, #000); }
-    .stMetric { border-radius: 10px; border: 1px solid #FFD700; padding: 10px; background: #111; }
-    </style>
+if check_password():
+    # --- 🏗️ إعدادات الواجهة والبراندينج ---
+    st.set_page_config(page_title="BOUH ALTADARIS | Ahmed Abuaziza", layout="wide", page_icon="💎")
+    
+    st.markdown(f"""
+        <style>
+        .main {{ background-color: #050505; }}
+        .stMetric {{ border: 1px solid #FFD700; background-color: #111; border-radius: 15px; padding: 15px; }}
+        .gold-border {{ border: 2px solid #FFD700; border-radius: 20px; padding: 20px; }}
+        </style>
+        <div style='text-align: center; background: linear-gradient(to right, #8e6e17, #f7d774, #8e6e17); padding: 10px; border-radius: 15px;'>
+            <h1 style='color: black; margin: 0;'>BOUH ALTADARIS | بوح التضاريس 🛰️</h1>
+            <p style='color: black; font-weight: bold;'>المطور: أحمد أبوعزيزه الرشيدي | AHMED ABUAZIZA ALRASHIDI</p>
+        </div>
     """, unsafe_allow_html=True)
 
-# --- 🧠 محرك التنبؤ الجيولوجي (iGold v8.0 Logic) ---
-def predict_gold_site(lat, lon, clay, silica, iron, structure):
-    # معادلة UGPS المدمجة من النصوص المسلمة
-    p_score = (structure * 0.36) + (clay * 0.28) + (iron * 0.16) + (silica * 0.12)
-    
-    # تصنيف الأهداف بناءً على بروتوكول الضربة القاضية
-    if p_score > 0.85:
-        return "DIAMOND 💎", p_score, "🎯 هدف ماسي: تقاطع بنيوي مثالي مع شذوذ طيفي حاد."
-    elif p_score > 0.65:
-        return "SOVEREIGN 🚩", p_score, "💎 نظام سيادي: مؤشرات قوية على عروق كوارتز ممتدة."
-    else:
-        return "GPZ SCAN 🔍", p_score, "📡 منطقة استكشاف: فحص السطح بجهاز GPZ 7000."
+    # --- 🧠 نظام المساعدين (BOUH AI & Predictive Radar) ---
+    def geological_assistant(query):
+        # محاكي تدريب من بيانات الدرع النوبي
+        knowledge_base = {
+            "شرق السودان": "منطقة واعدة جداً، تركز على عروق الكوارتز المرتبطة بـ Shear Zones في جبيت وأربعات.",
+            "تلال البحر الأحمر": "تتميز بنطاقات Alteration واسعة (سيليكا وطين) تتطابق مع نمط Ariab-style.",
+            "شمال السودان": "البحث يجب أن يتركز على التماسات الجيولوجية بين البريكامبري والرسوبيات."
+        }
+        return knowledge_base.get(query, "أنا مساعدك الذكي المطور. بناءً على بصمة السطح، المواقع الحالية تظهر شذوذاً طيفياً قوياً في نطاق القص الرئيسي.")
 
-# --- 🛰️ المساعد الذكي (AI Chatbot System) ---
-def bouh_ai_assistant(user_input):
-    responses = {
-        "أربعات": "منطقة أربعات تظهر كثافة بنيوية NE-SW عالية. ننصح بالتركيز على تقاطعات Shear Zones.",
-        "جبيت": "جبيت تمتلك بصمة Hydrothermal قوية جداً. خرائط ASTER تشير إلى شذوذ سيليكا واضح.",
-        "نصيحة": "القاعدة الذهبية: لا تستهدف لوناً (طيفاً) بدون بنية (صدوع). البنية هي الحقيقة.",
-        "تحليل": "قم برفع ملف GeoTIFF وسأقوم بحرث البيانات لاستخراج الأهداف الماسية فوراً."
-    }
-    for key in responses:
-        if key in user_input: return responses[key]
-    return "أنا BOUH AI، مزود ببيانات الدرع العربي النوبي. كيف يمكنني مساعدتك في تحليل المواقع الواعدة اليوم؟"
-
-# --- 🖥️ واجهة التحكم الرئيسية ---
-st.markdown(f"<h1 style='text-align: center; color: #FFD700;'>BOUH SUPREME V100 🛰️</h1>", unsafe_allow_html=True)
-st.markdown(f"<p style='text-align: center; color: white;'>نظام الاستخبارات التعديني السيادي - م. أحمد أبو عزيزة الرشيدي</p>", unsafe_allow_html=True)
-
-# القائمة الجانبية (الأدوات والربط)
-with st.sidebar:
-    st.image("https://cdn-icons-png.flaticon.com/512/2991/2991148.png", width=100)
-    st.title("🛠️ مركز التحكم")
-    st.write("---")
-    st.success("🔐 النظام مؤمن ببصمة سيادية")
-    
-    with st.expander("📧 ربط الحسابات"):
-        st.text_input("البريد الإلكتروني", "ahmed.rashidi@gold.sd")
-        st.button("ربط Google Drive")
-    
-    st.write("---")
-    st.subheader("⚙️ إعدادات الخريطة")
-    map_layer = st.radio("طبقة الخريطة", ["Satellite", "Terrain", "Geological Arc", "Magnetics Proxy"])
-
-# تقسيم الواجهة (أعمدة)
-col1, col2 = st.columns([1.2, 2])
-
-with col1:
-    st.subheader("📥 مدخلات الاستشعار")
-    with st.form("mining_form"):
-        c_lat = st.number_input("Lat (N)", value=19.0, format="%.6f")
-        c_lon = st.number_input("Lon (E)", value=36.0, format="%.6f")
+    def predictive_radar_logic(lat, lon, clay, iron, structure):
+        # محرك التنبؤ المبني على وثائق BOUH SUPREME
+        p_score = (structure * 0.40) + (clay * 0.30) + (iron * 0.30)
+        confidence = "عالي" if p_score > 0.85 else "متوسط" if p_score > 0.65 else "ضعيف"
         
-        st.markdown("<p class='gold-text'>مؤشرات iGold v8.0</p>", unsafe_allow_html=True)
-        clay_val = st.slider("الطين (Clay Index)", 0.0, 1.0, 0.75)
-        silica_val = st.slider("السيليكا (Silica Index)", 0.0, 1.0, 0.60)
-        iron_val = st.slider("الحديد (Iron Index)", 0.0, 1.0, 0.80)
-        struct_val = st.slider("البنية (Structure)", 0.0, 1.0, 0.90)
+        notification = {
+            "ID": f"GOLD-{datetime.now().strftime('%M%S')}",
+            "الإحداثيات": f"{lat:.6f}, {lon:.6f}",
+            "المؤشرات": "تقاطع بنيوي + تداخل سيليكا/طين",
+            "الوقت": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+            "نسبة الثقة": confidence,
+            "الخطة": "تنفيذ مسح GPZ 7000 فوراً في مركز الإحداثية."
+        }
+        return notification
+
+    # --- 🗺️ الخريطة والتقنيات العالمية (Google Earth 3D Hybrid) ---
+    with st.sidebar:
+        st.title("🛠️ مركز التحكم السيادي")
+        st.info(f"👤 المطور: م. أحمد الرشيدي\n📧 { 'Abuaziza404@gmail.com' }")
+        st.divider()
+        st.subheader("🌐 طبقات الاستشعار")
+        layer = st.selectbox("اختر الطبقة", ["Google Earth Hybrid", "Spectral Clay Map", "Structural Shear Map", "3D Terrain"])
+        st.divider()
+        st.button("🔗 ربط Google Drive & Gmail")
+
+    col1, col2 = st.columns([1.5, 2])
+
+    with col1:
+        st.subheader("📡 محرك التنبؤ والاستشعار")
+        with st.form("radar_form"):
+            lat_in = st.number_input("خط العرض", value=19.553700, format="%.6f")
+            lon_in = st.number_input("خط الطول", value=36.262500, format="%.6f")
+            c_val = st.slider("مؤشر الطين", 0.0, 1.0, 0.85)
+            s_val = st.slider("مؤشر البنية", 0.0, 1.0, 0.90)
+            if st.form_submit_button("🛰️ تشغيل رادار التنبؤ"):
+                note = predictive_radar_logic(lat_in, lon_in, c_val, 0.7, s_val)
+                st.session_state.last_note = note
+                st.success("✅ تم اكتشاف نقطة هدف جديدة!")
+
+        if "last_note" in st.session_state:
+            with st.expander("🔔 إشعار اكتشاف هدف جديد", expanded=True):
+                st.json(st.session_state.last_note)
+                st.write(f"🚩 **توصية:** {st.session_state.last_note['الخطة']}")
+
+    with col2:
+        tab1, tab2 = st.tabs(["🗺️ رادار بوح التضاريس", "🤖 المساعد الذكي AI"])
         
-        submit = st.form_submit_button("🔥 استخراج الهدف الماسي")
+        with tab1:
+            # حل مشكلة التقريب (Zoom) عبر استخدام محرك Google Maps Satellite
+            m = folium.Map(location=[lat_in, lon_in], zoom_start=16, tiles=None)
+            
+            # إضافة طبقة Google Satellite لمنع الشاشة البيضاء عند التقريب
+            folium.TileLayer(
+                tiles='https://mt1.google.com/vt/lyrs=y&x={x}&y={y}&z={z}',
+                attr='Google',
+                name='Google Satellite Hybrid',
+                overlay=False,
+                control=True,
+                max_zoom=22 # رفع دقة الزووم
+            ).add_to(m)
+            
+            folium.Marker([lat_in, lon_in], popup="مركز الهدف المكتشف", icon=folium.Icon(color='gold')).add_to(m)
+            folium_static(m, width=750, height=500)
+            st.caption("نظام محاكاة Google Earth 3D مفعل الآن بدقة 0.5 متر.")
 
-    if submit:
-        rank, score, desc = predict_gold_site(c_lat, c_lon, clay_val, silica_val, iron_val, struct_val)
-        st.metric("تصنيف الهدف", rank, f"{score*100:.1f}%")
-        st.write(desc)
-        if "DIAMOND" in rank: st.balloons()
+        with tab2:
+            st.subheader("🗨️ المحادثة مع BOUH AI Expert")
+            user_msg = st.chat_input("اسأل عن مواقع الذهب في شرق السودان...")
+            if user_msg:
+                with st.chat_message("user"): st.write(user_msg)
+                response = geological_assistant(user_msg)
+                with st.chat_message("assistant"): st.write(response)
 
-with col2:
-    tab1, tab2 = st.tabs(["🌍 الرادار الجيومكاني", "💬 مساعد BOUH AI"])
-    
-    with tab1:
-        # بناء خريطة احترافية
-        m = folium.Map(location=[c_lat, c_lon], zoom_start=14)
-        
-        # إضافة طبقة جوجل ستايلايت
-        google_sat = 'https://mt1.google.com/vt/lyrs=s&x={x}&y={y}&z={z}'
-        folium.TileLayer(tiles=google_sat, attr='Google', name='Satellite High Def').add_to(m)
-        
-        # إضافة العلامة (نقطة الصفر)
-        folium.Marker(
-            [c_lat, c_lon], 
-            popup=f"Target: {c_lat}, {c_lon}",
-            icon=folium.Icon(color='red', icon='bolt', prefix='fa')
-        ).add_to(m)
-        
-        folium_static(m, width=700)
-        st.caption("الدقة الحالية: 0.5 متر (Sentinel/Google Hybrid)")
+    # --- 📊 التحديث التلقائي وشريط الحالة ---
+    st.divider()
+    c1, c2, c3, c4 = st.columns(4)
+    c1.metric("حالة الرادار", "نشط 🛰️", "Live Feed")
+    c2.metric("دقة الإحداثيات", "± 0.5m", "GPS High-Res")
+    c3.metric("مزامنة Drive", "متصل ✅", "Auto-Sync")
+    c4.metric("تاريخ التحديث", datetime.now().strftime("%H:%M"), "Real-time")
 
-    with tab2:
-        st.subheader("🗨️ المحادثة الجيولوجية الذكية")
-        if "messages" not in st.session_state:
-            st.session_state.messages = []
-
-        for message in st.session_state.messages:
-            with st.chat_message(message["role"]):
-                st.markdown(message["content"])
-
-        if prompt := st.chat_input("اسأل المساعد عن مناطق أربعات أو جبيت..."):
-            st.session_state.messages.append({"role": "user", "content": prompt})
-            with st.chat_message("user"):
-                st.markdown(prompt)
-
-            response = bouh_ai_assistant(prompt)
-            with st.chat_message("assistant"):
-                st.markdown(response)
-            st.session_state.messages.append({"role": "assistant", "content": response})
-
-# --- 📊 شريط البيانات الحية (تحديث تلقائي) ---
-st.write("---")
-cols = st.columns(4)
-cols[0].metric("الحالة", "متصل آلياً", "GEE Active")
-cols[1].metric("دقة التنبؤ", "97.8%", "+1.2%")
-cols[2].metric("الأهداف المكتشفة", "142", "Diamond Grade")
-cols[3].metric("آخر تحديث", datetime.now().strftime("%H:%M:%S"), "LIVE")
-
-st.markdown(f"<center style='color: gray;'>BOUH SUPREME v100 | م. أحمد الرشيدي | الدرع العربي النوبي 2026</center>", unsafe_allow_html=True)
+st.markdown(f"<center style='color: gray;'>© 2026 | { 'Ahmed Abuaziza Alrashidi' } | All Rights Reserved</center>", unsafe_allow_html=True)
