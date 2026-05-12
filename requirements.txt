@@ -9,5 +9,6 @@ scikit-image
 langchain
 langchain-openai
 langchain-community
+langchain-core
 reportlab
 pysqlite3-binary
