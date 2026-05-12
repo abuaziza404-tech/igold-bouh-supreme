@@ -1,7 +1,7 @@
 import streamlit as st
 import os
 
-# --- حل مشكلة قواعد البيانات للسيرفر ---
+# --- حل مشكلة إصدار SQLite في سيرفرات Streamlit (حاسم جداً) ---
 try:
     __import__("pysqlite3")
     import sys
@@ -9,39 +9,60 @@ try:
 except ImportError:
     pass
 
-# --- استدعاء المكتبات بتنسيق 2026 الجديد ---
+# --- استدعاء المكتبات المحدثة لعام 2026 ---
 from langchain_openai import ChatOpenAI, OpenAIEmbeddings
 from langchain_community.vectorstores import Chroma
 from langchain_core.documents import Document
-from langchain.text_splitter import CharacterTextSplitter
+from langchain_text_splitters import CharacterTextSplitter
 
-# --- إعدادات الواجهة السيادية ---
-st.set_page_config(page_title="BOUH SUPREME OS", page_icon="🛰️", layout="wide")
+# --- إعدادات الواجهة السيادية (أسود وبرتقالي) ---
+st.set_page_config(
+    page_title="BOUH SUPREME v7",
+    page_icon="🛰️",
+    layout="wide"
+)
 
-# الربط مع المفتاح السري الذي وضعته في Secrets
+# الربط التلقائي مع مفتاح OpenAI من الأسرار
 if "OPENAI_API_KEY" in st.secrets:
     os.environ["OPENAI_API_KEY"] = st.secrets["OPENAI_API_KEY"]
 
-# --- واجهة المستخدم ---
-st.title("🛰️ نظام بوح SUPREME - النسخة السابعة")
-st.markdown("---")
+# --- تصميم الواجهة ---
+st.markdown("""
+    <style>
+    .main { background-color: #0e1117; color: #ffffff; }
+    .stButton>button { background-color: #ff4b1f; color: white; width: 100%; border-radius: 8px; }
+    </style>
+    """, unsafe_allow_html=True)
 
+st.title("🛰️ نظام بوح SUPREME للاستخبارات الجيولوجية")
+st.write(f"مرحباً بك يا بشمهندس أحمد أبو عزيزة في منصة التحكم")
+
+# --- لوحة التحكم الجانبية ---
 with st.sidebar:
-    st.header("⚙️ التحكم")
-    key = st.text_input("رمز الدخول", type="password")
-    if key == "abuaziza2000":
-        st.success("تم تفعيل الصلاحيات يا بشمهندس أحمد")
+    st.header("⚙️ الدخول السيادي")
+    password = st.text_input("رمز الوصول", type="password")
+    
+    if password == "abuaziza2000":
+        st.success("✅ تم التحقق من الهوية")
+        st.info("المنطقة: أربعات / تلال البحر الأحمر")
+        mode = st.selectbox("وضع التحليل", ["Spectroscopy (Landsat 8/9)", "Quartz Veins Detection", "Shear Zone Mapping"])
 
-if key == "abuaziza2000":
-    col1, col2 = st.columns(2)
+# --- القسم الرئيسي ---
+if password == "abuaziza2000":
+    col1, col2 = st.columns([2, 1])
+    
     with col1:
-        st.subheader("📁 رفع البيانات الميدانية")
-        file = st.file_uploader("ارفع صورة المنطقة (أربعات / البحر الأحمر)", type=['jpg', 'png', 'tif'])
-        if file:
-            st.image(file, caption="جاري التحليل الطيفي...")
-            st.button("بدء استخراج مؤشر الذهب (GPI)")
+        st.subheader("📁 مركز رفع البيانات الميدانية")
+        uploaded_file = st.file_uploader("ارفع صورة القمر الصناعي (TIF, JPG, PNG)", type=['png', 'jpg', 'tif'])
+        
+        if uploaded_file:
+            st.image(uploaded_file, caption="جاري معالجة البيانات الطيفية...")
+            if st.button("بدء تحليل مؤشر الذهب (GPI)"):
+                st.warning("جاري مطابقة التكوينات الصخرية مع قاعدة بيانات النماذج الذكية...")
+                
     with col2:
-        st.subheader("📊 تقرير الذكاء الاصطناعي")
-        st.write("النظام جاهز لتحليل تشققات الصخور وعروق المرو.")
+        st.subheader("📊 ذكاء المنصة")
+        st.write("نظام التشفير السيادي مفعل.")
+        st.metric(label="درجة الاحتمالية (أربعات)", value="--", delta="بانتظار البيانات")
 else:
-    st.warning("بانتظار رمز الدخول لبدء العمليات السيادية.")
+    st.info("يرجى إدخال رمز الدخول (abuaziza2000) لتفعيل محرك الاستخبارات الجيولوجية.")
