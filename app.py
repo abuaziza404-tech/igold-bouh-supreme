@@ -8,191 +8,159 @@ import plotly.graph_objects as go
 from datetime import datetime
 
 # ============================================================
-# 1. إعدادات الهوية والتصميم المؤسسي (Enterprise Branding)
+# 1. إعدادات الهوية البصرية المؤسسية (Corporate UI)
 # ============================================================
-st.set_page_config(page_title="BOUH ALTADARIS OS | النسخة السيادية", layout="wide")
+st.set_page_config(page_title="BOUH SUPREME | Enterprise OS", layout="wide")
 
-def apply_sovereign_ui():
+def apply_corporate_style():
     st.markdown("""
         <style>
         @import url('https://fonts.googleapis.com/css2?family=Cairo:wght@400;700;900&family=Amiri:ital,wght@1,700&display=swap');
         
-        /* الخلفية العامة */
+        /* الخلفية والخطوط الأساسية */
         .stApp { background-color: #050505; color: #e0e0e0; }
         
-        /* الهيدر المؤسسي المتطور */
-        .brand-container {
+        /* هيدر الشركات الاحترافي */
+        .header-container {
             text-align: center;
-            padding: 40px 20px;
-            background: linear-gradient(180deg, #121212 0%, #050505 100%);
-            border-bottom: 3px solid #CC4400;
-            margin-bottom: 30px;
-            box-shadow: 0 4px 20px rgba(204, 68, 0, 0.2);
+            padding: 50px 20px;
+            background: linear-gradient(180deg, #1a1a1a 0%, #050505 100%);
+            border-bottom: 4px solid #CC4400;
+            margin-bottom: 40px;
+            border-radius: 0 0 20px 20px;
         }
-        .main-title {
+        .corporate-title {
             font-family: 'Cairo', sans-serif;
-            font-size: 52px;
+            font-size: 64px;
             font-weight: 900;
             color: #FFFFFF;
             margin: 0;
-            letter-spacing: 2px;
-            text-shadow: 2px 2px 12px rgba(204, 68, 0, 0.6);
+            text-transform: uppercase;
+            letter-spacing: -1px;
+            line-height: 1.1;
         }
-        .engineer-name {
+        .engineer-sub {
             font-family: 'Cairo', sans-serif;
-            font-size: 28px;
+            font-size: 26px;
             font-weight: 700;
             color: #CC4400;
-            margin-top: 5px;
-            letter-spacing: 1px;
+            margin-top: 10px;
+            letter-spacing: 2px;
         }
         .verse-box {
             font-family: 'Amiri', serif;
-            font-size: 22px;
+            font-size: 24px;
             color: #D4AF37;
-            margin-top: 15px;
+            margin-top: 20px;
             font-style: italic;
-            opacity: 0.9;
+            opacity: 0.8;
         }
         
-        /* تنسيق البطاقات والأزرار */
-        .metric-card {
-            background: #111;
-            border: 1px solid #222;
-            padding: 20px;
-            border-radius: 12px;
-            text-align: center;
-            border-top: 4px solid #CC4400;
-            transition: 0.3s;
-        }
-        .metric-card:hover { border-color: #FF5500; transform: translateY(-5px); }
+        /* تنسيق رمز القفل والأمان */
+        .lock-icon { font-size: 24px; color: #CC4400; margin-bottom: 10px; }
         
+        /* أزرار احترافية */
         .stButton>button {
-            background-color: #CC4400;
+            background: linear-gradient(90deg, #CC4400 0%, #FF5500 100%);
             color: white;
-            border-radius: 6px;
-            font-weight: bold;
-            width: 100%;
-            height: 3em;
-            transition: 0.3s;
             border: none;
+            border-radius: 8px;
+            padding: 15px;
+            font-weight: 900;
+            transition: 0.4s;
         }
-        .stButton>button:hover { background-color: #FF5500; box-shadow: 0 0 15px rgba(255, 85, 0, 0.4); }
-        
-        /* تحسين التنسيق العربي */
-        body { direction: rtl; text-align: right; }
+        .stButton>button:hover { transform: scale(1.02); box-shadow: 0 0 20px rgba(204, 68, 0, 0.5); }
         </style>
         
-        <div class="brand-container">
-            <div style="color: #666; font-size: 12px; letter-spacing: 4px; font-weight: bold; margin-bottom: 10px;">BOUH SUPREME | GEOLOGICAL INTELLIGENCE</div>
-            <h1 class="main-title">بوح التضاريس</h1>
-            <div class="engineer-name">المهندس أحمد أبوعزيزه الرشيدي</div>
+        <div class="header-container">
+            <div class="lock-icon">🔒 SYSTEM SECURED | ENTERPRISE GRADE</div>
+            <h1 class="corporate-title">بوح التضاريس</h1>
+            <div class="engineer-sub">المهندس أحمد أبوعزيزه الرشيدي</div>
             <div class="verse-box">"لمعة ذهب بين الصخر والتضاريس .. مضمونها سيرة عظيم النزاهه"</div>
         </div>
     """, unsafe_allow_html=True)
 
-apply_sovereign_ui()
+# ============================================================
+# 2. نظام الدخول والأمان (Security Gate)
+# ============================================================
+if 'authenticated' not in st.session_state:
+    st.session_state.authenticated = False
+
+def login_gate():
+    apply_corporate_style()
+    col1, col2, col3 = st.columns([1,1.5,1])
+    with col2:
+        st.markdown("<h3 style='text-align: center;'>🔐 تسجيل دخول المؤسسة</h3>", unsafe_allow_html=True)
+        password = st.text_input("أدخل مفتاح الوصول السيادي:", type="password")
+        if st.button("فتح النظام"):
+            if password == "BOUH2026": # كلمة المرور الافتراضية
+                st.session_state.authenticated = True
+                st.rerun()
+            else:
+                st.error("❌ مفتاح الوصول غير صحيح")
+    st.stop()
+
+if not st.session_state.authenticated:
+    login_gate()
 
 # ============================================================
-# 2. محرك الحسابات الجيوفيزيائية (Geophysical Logic)
+# 3. محتوى النظام الاحترافي بعد الدخول
 # ============================================================
-class BouhScienceCore:
-    @staticmethod
-    def calculate_gpi(s, a, p):
-        # بروتوكول الضربة القاضية من وثائق بوح التضاريس
-        if s < 0.7:
-            return 0.0, "REJECT (Missing Structural Control)", "red"
-        
-        gpi = (s * 0.5) + (a * 0.3) + (p * 0.2)
-        
-        if gpi >= 0.88:
-            return gpi, "TARGET-B (Diamond Priority)", "green"
-        elif gpi >= 0.70:
-            return gpi, "HOLD (Field Verification Needed)", "orange"
-        return gpi, "REJECT (Low Potential)", "gray"
+apply_corporate_style()
 
-# ============================================================
-# 3. لوحة التحكم المركزية (Unified Dashboard)
-# ============================================================
-def main():
-    # Sidebar
-    with st.sidebar:
-        st.markdown("### 🛰️ مركز العمليات")
-        st.success("BOUH-OS v17.5 | Online")
-        app_mode = st.radio("القائمة الرئيسية:", 
-                           ["🛰️ الرادار الاستخباري", "📡 مختبر الجيوفيزياء", "🧭 الإدارة الميدانية & SOS"])
-        st.divider()
-        st.info("المهندس: أحمد أبوعزيزه الرشيدي\nالحالة: متصل عبر الأقمار الصناعية")
+# Sidebar المطور
+with st.sidebar:
+    st.image("https://cdn-icons-png.flaticon.com/512/3664/3664856.png", width=80)
+    st.markdown("### 🛰️ مركز التحكم")
+    menu = st.radio("المنظومة التنفيذية:", 
+                   ["📡 الرادار الاستخباري HD", "📊 المختبر الجيوفيزيائي", "📝 التقارير والمساعد التقني"])
+    st.divider()
+    if st.button("تسجيل الخروج"):
+        st.session_state.authenticated = False
+        st.rerun()
 
-    if app_mode == "🛰️ الرادار الاستخباري":
-        col_map, col_ctrl = st.columns([2.2, 1])
-        
-        with col_map:
-            st.markdown("#### 🗺️ الخريطة التكتيكية (Ultra HD)")
-            m = folium.Map(location=[19.5, 36.5], zoom_start=8, tiles=None)
-            
-            # طبقات خرائط HD
-            folium.TileLayer('https://mt1.google.com/vt/lyrs=y,h&x={x}&y={y}&z={z}', 
-                             attr='Google Hybrid', name='Google Hybrid (HD)').add_to(m)
-            folium.TileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', 
-                             attr='Esri', name='Esri Satellite').add_to(m)
-            
-            # أدوات الميدان
-            plugins.Draw(export=True).add_to(m)
-            plugins.MeasureControl(position='topleft').add_to(m)
-            plugins.Fullscreen().add_to(m)
-            plugins.LocateControl().add_to(m)
-            folium.LayerControl(collapsed=False).add_to(m)
-            
-            folium_static(m, width=900, height=550)
-            
-        with col_ctrl:
-            st.markdown("#### 🎯 محلل الأهداف (GPI)")
-            with st.container(border=True):
-                s_val = st.slider("مؤشر البنية (Structure)", 0.0, 1.0, 0.85)
-                a_val = st.slider("مؤشر التغيير (Alteration)", 0.0, 1.0, 0.70)
-                p_val = st.slider("نمط التكرار (Pattern)", 0.0, 1.0, 0.60)
-                
-                score, status, color = BouhScienceCore.calculate_gpi(s_val, a_val, p_val)
-                
-                st.markdown(f"### الحالة: <span style='color:{color}'>{status}</span>", unsafe_allow_html=True)
-                st.metric("GPI SCORE", f"{score:.2f}")
-                
-                if st.button("توليد تقرير استكشافي"):
-                    st.toast("جاري تحليل البيانات الجيوفيزيائية...")
-                    st.success("تم إعداد التقرير بنجاح.")
+if menu == "📡 الرادار الاستخباري HD":
+    st.subheader("🗺️ خرائط المسح التكتيكي والطبقات")
+    
+    # اختيار الخريطة
+    map_type = st.selectbox("اختر طبقة المسح:", ["Google Hybrid", "Esri Satellite", "Terrain Mapping"])
+    
+    m = folium.Map(location=[19.5, 36.5], zoom_start=9)
+    
+    if map_type == "Google Hybrid":
+        folium.TileLayer('https://mt1.google.com/vt/lyrs=y,h&x={x}&y={y}&z={z}', attr='BOUH', name='Google').add_to(m)
+    else:
+        folium.TileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', attr='Esri', name='Esri').add_to(m)
 
-    elif app_mode == "📡 مختبر الجيوفيزياء":
-        st.subheader("📊 التحليل الجيوفيزيائي والنمذجة")
-        c1, c2 = st.columns(2)
-        
-        with c1:
-            st.markdown("<div class='metric-card'>", unsafe_allow_html=True)
-            st.write("مُحاكي المغناطيسية (Magnetic Profile)")
-            x = np.linspace(0, 10, 100)
-            y = np.sin(x) * 500
-            fig = go.Figure(data=go.Scatter(x=x, y=y, line=dict(color='#CC4400', width=3)))
-            fig.update_layout(template="plotly_dark", height=300, margin=dict(l=20, r=20, t=20, b=20))
-            st.plotly_chart(fig, use_container_width=True)
-            st.markdown("</div>", unsafe_allow_html=True)
+    # أدوات الميدان
+    plugins.Draw(export=True).add_to(m)
+    plugins.MeasureControl(position='topleft').add_to(m)
+    plugins.Fullscreen().add_to(m)
+    folium_static(m, width=1200, height=600)
 
-        with c2:
-            st.markdown("<div class='metric-card'>", unsafe_allow_html=True)
-            st.write("نموذج المقاومة الكهربائية (Resistivity)")
-            df_res = pd.DataFrame({'طبقة': ['سطحية', 'مؤكسدة', 'كبريتيدية'], 'Ohm-m': [1500, 450, 2200]})
-            st.bar_chart(df_res.set_index('طبقة'))
-            st.markdown("</div>", unsafe_allow_html=True)
+elif menu == "📊 المختبر الجيوفيزيائي":
+    st.subheader("🔬 تحليل البيانات الجيوفيزيائية")
+    c1, c2 = st.columns(2)
+    
+    with c1:
+        st.markdown("#### التدرج المغناطيسي (Magnetic Signal)")
+        x = np.linspace(0, 10, 100)
+        y = np.exp(-0.1*x) * np.sin(2*x) * 1000
+        fig = go.Figure(data=go.Scatter(x=x, y=y, line=dict(color='#CC4400', width=4)))
+        fig.update_layout(template="plotly_dark", height=400)
+        st.plotly_chart(fig, use_container_width=True)
 
-    elif app_mode == "🧭 الإدارة الميدانية & SOS":
-        st.subheader("🛠️ أدوات السلامة والميدان")
-        col_sos, col_files = st.columns(2)
-        with col_sos:
-            st.error("🚨 نظام الطوارئ SOS")
-            if st.button("بث إحداثيات الموقع الحالي"):
-                st.toast("تم إرسال تنبيه الطوارئ بنجاح.")
-        with col_files:
-            st.info("📂 تصدير البيانات")
-            st.button("📦 تصدير ملف KML (لـ Alpine Quest)")
+    with c2:
+        st.markdown("#### نموذج المقاومة النوعية (Resistivity)")
+        data = pd.DataFrame({'Layer': ['Topsoil', 'Oxidized', 'Primary Gold Zone'], 'Ohm-m': [1200, 350, 2800]})
+        st.bar_chart(data.set_index('Layer'))
 
-if __name__ == "__main__":
-    main()
+elif menu == "📝 التقارير والمساعد التقني":
+    st.subheader("🧠 المساعد الجيولوجي الذكي")
+    query = st.text_input("اسأل المنظومة عن أي تفاصيل بنيوية أو عروق الكوارتز:")
+    if query:
+        st.info("بناءً على بروتوكول بوح التضاريس: يفضل فحص تقاطعات الصدوع في هذه المنطقة لزيادة احتمالية التمعدن.")
+    
+    st.divider()
+    st.download_button("📥 تصدير التقرير الفني الموحد", b"DATA", "BOUH_Report.pdf")
+
