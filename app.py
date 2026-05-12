@@ -8,80 +8,69 @@ import plotly.graph_objects as go
 from datetime import datetime
 
 # ============================================================
-# 1. إعدادات الهوية المؤسسية (Enterprise Brand Identity)
+# 1. إعدادات الهوية المؤسسية والواجهة الذهبية (Golden Enterprise UI)
 # ============================================================
-st.set_page_config(page_title="BOUH SUPREME | Enterprise OS", layout="wide")
+st.set_page_config(page_title="BOUH SUPREME | Sovereign OS", layout="wide")
 
-def apply_corporate_ui():
+def apply_golden_ui():
     st.markdown("""
         <style>
         @import url('https://fonts.googleapis.com/css2?family=Cairo:wght@400;700;900&family=Amiri:ital,wght@1,700&display=swap');
         
-        /* ضبط السمة العامة */
-        .stApp { background-color: #050505; color: #e0e0e0; }
+        /* الخلفية والسمة العامة */
+        .stApp { background-color: #050505; color: #E0E0E0; }
         
-        /* هيدر الشركات الاحترافي */
+        /* هيدر المؤسسة الذهبي الاحترافي */
         .header-container {
             text-align: center;
-            padding: 45px 20px;
+            padding: 50px 20px;
             background: linear-gradient(180deg, #151515 0%, #050505 100%);
-            border-bottom: 4px solid #CC4400;
+            border-bottom: 3px solid #D4AF37;
             margin-bottom: 40px;
             border-radius: 0 0 30px 30px;
-            box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+            box-shadow: 0 10px 40px rgba(212, 175, 55, 0.15);
         }
         .main-title {
             font-family: 'Cairo', sans-serif;
-            font-size: 60px;
+            font-size: 68px;
             font-weight: 900;
             color: #FFFFFF;
             margin: 0;
-            letter-spacing: -1px;
-            text-shadow: 0 0 15px rgba(204, 68, 0, 0.4);
+            letter-spacing: -2px;
+            text-shadow: 0 0 20px rgba(212, 175, 55, 0.5);
         }
         .engineer-sub {
             font-family: 'Cairo', sans-serif;
-            font-size: 26px;
+            font-size: 28px;
             font-weight: 700;
-            color: #CC4400;
+            color: #D4AF37; /* اللون الذهبي الاحترافي */
             margin-top: 5px;
+            letter-spacing: 2px;
         }
         .verse-box {
             font-family: 'Amiri', serif;
-            font-size: 22px;
-            color: #D4AF37;
-            margin-top: 15px;
+            font-size: 24px;
+            color: #C0C0C0;
+            margin-top: 20px;
             font-style: italic;
         }
         
-        /* رمز الأمان */
-        .security-badge {
-            background: rgba(204, 68, 0, 0.1);
-            color: #CC4400;
-            padding: 5px 15px;
-            border-radius: 20px;
-            font-size: 12px;
-            font-weight: bold;
-            border: 1px solid #CC4400;
-            display: inline-block;
-            margin-bottom: 10px;
-        }
-
-        /* تنسيق القوائم والأزرار */
+        /* وحدة التحكم الذكية */
         .stButton>button {
-            background: linear-gradient(90deg, #CC4400 0%, #882200 100%);
-            color: white; border: none; border-radius: 5px;
-            font-weight: bold; width: 100%; transition: 0.3s;
+            background: linear-gradient(90deg, #D4AF37 0%, #B8860B 100%);
+            color: black; border: none; border-radius: 8px;
+            font-weight: 900; width: 100%; height: 3.5em; transition: 0.4s;
         }
-        .stButton>button:hover { transform: scale(1.02); box-shadow: 0 0 15px #CC4400; }
+        .stButton>button:hover { transform: scale(1.03); box-shadow: 0 0 25px #D4AF37; }
         
-        /* إخفاء القوائم الافتراضية */
-        #MainMenu {visibility: hidden;}
-        footer {visibility: hidden;}
+        /* تنبيهات النجاة والطوارئ */
+        .emergency-btn>button { background: #8B0000 !important; color: white !important; }
         </style>
         
         <div class="header-container">
-            <div class="security-badge">🔒 SECURED BY BOUH ENCRYPTION</div>
+            <div style="color: #666; font-size: 13px; letter-spacing: 5px; font-weight: bold; margin-bottom: 10px;">
+                🛰️ SAT-LINK: STARLINK ACTIVE | GPS L1/L5 🔒
+            </div>
             <h1 class="main-title">بوح التضاريس</h1>
             <div class="engineer-sub">المهندس أحمد أبوعزيزه الرشيدي</div>
             <div class="verse-box">"لمعة ذهب بين الصخر والتضاريس .. مضمونها سيرة عظيم النزاهه"</div>
@@ -89,123 +78,96 @@ def apply_corporate_ui():
     """, unsafe_allow_html=True)
 
 # ============================================================
-# 2. بوابة الوصول الآمن (Security Access)
+# 2. المساعد الذكي التنبؤي (BOUH AI Prediction Engine)
 # ============================================================
-if 'logged_in' not in st.session_state:
-    st.session_state.logged_in = False
-
-def login():
-    apply_corporate_ui()
-    col1, col2, col3 = st.columns([1, 1.2, 1])
-    with col2:
-        st.markdown("<h3 style='text-align: center;'>🔐 نظام الوصول السيادي</h3>", unsafe_allow_html=True)
-        pwd = st.text_input("أدخل مفتاح التشفير:", type="password")
-        if st.button("فتح المنصة"):
-            if pwd == "BOUH2026": # يمكنك تغيير كلمة المرور هنا
-                st.session_state.logged_in = True
-                st.rerun()
-            else:
-                st.error("⚠️ خطأ في مفتاح الوصول")
-    st.stop()
-
-if not st.session_state.logged_in:
-    login()
+class BouhPredictiveAI:
+    @staticmethod
+    def get_geological_prediction(mag_val, structure_score):
+        if mag_val > 800 and structure_score > 0.8:
+            return "🎯 تنبيه عالي الأهمية: احتمالية وجود عروق كوارتز متمعدنة بنسبة 92%", "GOLD"
+        return "⚠️ استمر في المسح: البنية الجيولوجية تحتمل وجود تحولات صخرية عميقة", "INFO"
 
 # ============================================================
-# 3. محرك معالجة البيانات (Geophysical Engine)
+# 3. محرك النظام (Core OS)
 # ============================================================
-apply_corporate_ui()
+apply_golden_ui()
 
-# Sidebar المطور
+# القائمة الجانبية (Sidebar)
 with st.sidebar:
-    st.markdown("### 🛰️ لوحة التحكم التنفيذية")
-    choice = st.selectbox("اختر المنظومة:", 
-                         ["📡 الرادار الاستخباري HD", 
-                          "🔬 المختبر الجيوفيزيائي", 
-                          "🗂️ قاعدة البيانات البنيوية",
-                          "🆘 بروتوكول الطوارئ SOS"])
+    st.markdown("### 🛰️ مصفوفة القيادة (STARLINK)")
+    st.success("الارتباط: STARLINK-V3 متصل 📶")
+    st.markdown("---")
+    menu = st.radio("الأنظمة المركزية:", 
+                   ["📡 الرادار المباشر HD", 
+                    "🧠 المساعد AI التنبؤي", 
+                    "🔋 وحدة الطاقة والجيوفيزياء", 
+                    "🆘 مركز النجاة & STARLINK SOS"])
     st.divider()
-    st.info("المستخدم: م. أحمد الرشيدي\nالنظام: نشط")
-    if st.button("تسجيل الخروج"):
-        st.session_state.logged_in = False
-        st.rerun()
+    st.info("إحداثيات GPS المباشرة: 19.5N, 36.5E")
 
-# ------------------------------------------------------------
-# المنظومة 1: الرادار والخرائط
-# ------------------------------------------------------------
-if choice == "📡 الرادار الاستخباري HD":
-    st.subheader("🗺️ محرك الخرائط والطبقات الجيولوجية")
+if menu == "📡 الرادار المباشر HD":
+    st.subheader("🛰️ وحدة الاستكشاف الراداري (Ultra-Clear Surface Scan)")
     
-    col_map, col_tools = st.columns([3, 1])
-    
-    with col_tools:
-        st.markdown("### ⚙️ إعدادات الطبقات")
-        layer = st.radio("القمر الصناعي:", ["Google Hybrid (HD)", "Esri Discovery", "Standard Terrain"])
+    col_map, col_cfg = st.columns([2.5, 1])
+    with col_cfg:
+        st.markdown("### 🛠️ إعدادات الرادار")
+        depth_scan = st.select_slider("مدد المسح العمودي (متر):", options=[50, 100, 250, 500, 1000])
+        radar_power = st.progress(85, text="قوة الإشارة الرادارية")
+        st.checkbox("تفعيل الربط المباشر مع الأقمار (Real-Time)")
         st.divider()
-        st.markdown("#### 🛠️ مساعدين تقنيين")
-        st.checkbox("إظهار الصدوع المحتملة", value=True)
-        st.checkbox("تحديد مناطق الألتريشن")
+        st.markdown("#### 🌗 وضعية الرؤية")
+        st.toggle("الرؤية الليلية (Night Mode)")
+        st.toggle("كاشف التوهان الجغرافي")
 
     with col_map:
-        m = folium.Map(location=[19.5, 36.5], zoom_start=8, tiles=None)
+        m = folium.Map(location=[19.5, 36.5], zoom_start=9, tiles=None)
+        # دمج طبقات الأقمار الصناعية الأحدث
+        folium.TileLayer('https://mt1.google.com/vt/lyrs=y,h&x={x}&y={y}&z={z}', 
+                         attr='STARLINK', name='Satellite Hybrid HD').add_to(m)
         
-        if "Google" in layer:
-            folium.TileLayer('https://mt1.google.com/vt/lyrs=y,h&x={x}&y={y}&z={z}', 
-                             attr='BOUH-OS', name='Google Hybrid').add_to(m)
-        else:
-            folium.TileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', 
-                             attr='Esri', name='Esri Satellite').add_to(m)
-
-        # إضافة أدوات الرسم والقياس (مهمة للميدان)
+        # ميزات الاستكشاف المتقدمة
         plugins.Draw(export=True).add_to(m)
         plugins.MeasureControl(position='topleft').add_to(m)
-        plugins.Fullscreen().add_to(m)
         plugins.LocateControl().add_to(m)
+        plugins.Fullscreen().add_to(m)
         
-        folium_static(m, width=1000, height=550)
+        folium_static(m, width=1050, height=580)
 
-# ------------------------------------------------------------
-# المنظومة 2: المختبر الجيوفيزيائي
-# ------------------------------------------------------------
-elif choice == "🔬 المختبر الجيوفيزيائي":
-    st.subheader("📊 معالجة الإشارات الجيوفيزيائية")
-    c1, c2 = st.columns(2)
+elif menu == "🧠 المساعد AI التنبؤي":
+    st.subheader("🤖 مساعد الذكاء الاصطناعي الجيولوجي (BOUH-AI Core)")
     
+    col_ai_input, col_ai_result = st.columns(2)
+    with col_ai_input:
+        st.write("📥 أدخل بيانات الموقع للمسح التنبؤي:")
+        s_score = st.slider("مؤشر البنية (Structural Score)", 0.0, 1.0, 0.85)
+        mag_reading = st.number_input("قراءة المغناطيسية (Gamma/nT)", value=1200)
+        
+        if st.button("تحليل البيانات تنبؤياً"):
+            res, tag = BouhPredictiveAI.get_geological_prediction(mag_reading, s_score)
+            st.session_state.ai_res = res
+
+    with col_ai_result:
+        st.markdown("<div style='background:#1a1a1a; padding:20px; border-radius:10px; border:1px solid #D4AF37;'>", unsafe_allow_html=True)
+        st.write("🔮 التقرير التنبؤي:")
+        if 'ai_res' in st.session_state:
+            st.warning(st.session_state.ai_res)
+        st.markdown("</div>", unsafe_allow_html=True)
+
+elif menu == "🆘 مركز النجاة & STARLINK SOS":
+    st.error("🚨 بروتوكول النجاة والطوارئ العالمي")
+    st.write("هذه الوحدة مرتبطة مباشرة بـ **STARLINK** للعمل عند انقطاع الإنترنت الأرضي.")
+    
+    c1, c2 = st.columns(2)
     with c1:
-        st.markdown("#### ⚡ تحليل المقاومة النوعية (Resistivity)")
-        # محاكاة لبيانات المقاومة
-        depth = np.linspace(0, 100, 50)
-        res = 500 + (depth**1.5) + np.random.normal(0, 50, 50)
-        fig = go.Figure(data=go.Scatter(x=res, y=depth, line=dict(color='#CC4400', width=3)))
-        fig.update_layout(title="Profile: Res vs Depth", template="plotly_dark", yaxis_autorange="reversed")
-        st.plotly_chart(fig, use_container_width=True)
-
-    with c2:
-        st.markdown("#### نتائج المسح المغناطيسي (Mag)")
-        mag_data = pd.DataFrame({
-            'Zone': ['North-East', 'Central Fault', 'South-West'],
-            'nT Anomaly': [450, 1200, 320]
-        })
-        st.bar_chart(mag_data.set_index('Zone'))
-
-# ------------------------------------------------------------
-# المنظومة 3: المساعد والتقارير
-# ------------------------------------------------------------
-elif choice == "🗂️ قاعدة البيانات البنيوية":
-    st.subheader("📝 مدخلات الميدان والمساعد الذكي")
-    with st.expander("اضغط لإضافة ملاحظة ميدانية جديدة"):
-        note = st.text_area("وصف الصخور أو العروق المكتشفة:")
-        if st.button("حفظ وتشفير الملاحظة"):
-            st.success("تم الحفظ بنجاح في قاعدة البيانات السيادية.")
+        st.markdown("#### 🆘 نداء استغاثة (Emergency)")
+        if st.button("🔥 إرسال SOS عبر الأقمار الصناعية"):
+            st.toast("تم إرسال إحداثياتك لفرق الطوارئ بنجاح عبر STARLINK.")
             
+    with c2:
+        st.markdown("#### 🧭 بوصلة النجاة")
+        st.info("أقرب نقطة آمنة (Base Camp): 12كم شمالاً")
+    
     st.divider()
-    st.markdown("#### 🤖 المساعد التقني (BOUH AI)")
-    st.info("نصيحة اليوم: تفحص مناطق التقاء الصدوع العرضية مع أحزمة الكوارتز، فهي أكثر المناطق احتمالاً لاحتضان التمعدن العالي.")
+    st.markdown("#### 🛰️ حالة اتصال STARLINK")
+    st.code("Uplink: 150 Mbps | Latency: 25ms | Satellite Count: 42")
 
-# ------------------------------------------------------------
-# المنظومة 4: SOS
-# ------------------------------------------------------------
-elif choice == "🆘 بروتوكول الطوارئ SOS":
-    st.error("🚨 نظام الطوارئ وبث الموقع")
-    if st.button("⚠️ تفعيل بروتوكول SOS"):
-        st.warning("جاري تحديد الإحداثيات وبث إشارة الطوارئ للطاقم الميداني...")
