@@ -3,12 +3,13 @@ import pandas as pd
 import folium
 from streamlit_folium import st_folium
 import plotly.express as px
+import numpy as np
 
 # =====================================================
 # 🛰️ CONFIG
 # =====================================================
 st.set_page_config(
-    page_title="بوح التضاريس GX Mining",
+    page_title="BOUH GX INDUSTRIAL ENGINE",
     page_icon="🛰️",
     layout="wide"
 )
@@ -17,56 +18,51 @@ SYSTEM_LOCK = "abuaziza2000"
 DEVELOPER = "أحمد أبو عزيزه الرشيدي"
 
 # =====================================================
-# 🎨 UI STYLE (Arabic + Institutional)
+# 🎨 UI (Industrial Geological Theme)
 # =====================================================
 st.markdown("""
 <style>
-body {direction: rtl;}
-.main {background-color:#0b0f14; color:white;}
+body {direction: rtl; background:#0b0f14;}
+.main {background:#0b0f14; color:white;}
 
-.title-box {
-    text-align:center;
-    padding:10px;
-}
-
-.big-title {
-    font-size:40px;
+.title {
+    font-size:42px;
     font-weight:bold;
     color:#FFD700;
+    text-align:center;
 }
 
-.dev-name {
-    font-size:18px;
+.subtitle {
+    text-align:center;
     color:#ffffff;
     margin-top:-10px;
+}
+
+.lock {
+    text-align:center;
+    color:red;
+    font-weight:bold;
 }
 
 .poetry {
     background:black;
     color:#FFD700;
     text-align:center;
-    padding:10px;
+    padding:12px;
     border:1px solid #FFD700;
     margin-top:10px;
-    font-style:italic;
-}
-
-.lock {
-    color:red;
-    font-weight:bold;
 }
 </style>
 """, unsafe_allow_html=True)
 
 # =====================================================
-# 🛰️ HEADER (Institutional Identity)
+# 🛰️ HEADER
 # =====================================================
 st.markdown(f"""
-<div class='title-box'>
-    <div class='big-title'>🛰️ بوح التضاريس GX MINING v3.0</div>
-    <div class='dev-name'>المهندس: {DEVELOPER}</div>
-    <div class='lock'>SYSTEM LOCK: {SYSTEM_LOCK}</div>
-</div>
+<div class='title'>🛰️ GX INDUSTRIAL ENGINE v4.0</div>
+<div class='subtitle'>نظام استخبارات تعدين جيولوجي صناعي متقدم</div>
+<div class='subtitle'>المهندس: {DEVELOPER}</div>
+<div class='lock'>SYSTEM LOCK: {SYSTEM_LOCK}</div>
 
 <div class='poetry'>
 لمعة ذهب بين الصخر والتضاريس<br>
@@ -75,93 +71,90 @@ st.markdown(f"""
 """, unsafe_allow_html=True)
 
 # =====================================================
-# 📦 GEO DATA CORE
+# 📦 DATA CORE
 # =====================================================
 def load_data():
     return pd.DataFrame([
-        {"id":"T-001","name":"أربعات","lat":19.82,"lon":36.95,"gpi":92,"type":"A"},
-        {"id":"T-002","name":"سنكات","lat":18.84,"lon":36.75,"gpi":85,"type":"A"},
-        {"id":"T-003","name":"جبيت","lat":20.15,"lon":36.50,"gpi":65,"type":"B"},
-        {"id":"T-004","name":"الممر المخفي","lat":21.05,"lon":35.80,"gpi":95,"type":"A"},
+        {"id":"T-001","name":"أربعات","lat":19.82,"lon":36.95,"gpi":92},
+        {"id":"T-002","name":"سنكات","lat":18.84,"lon":36.75,"gpi":85},
+        {"id":"T-003","name":"جبيت","lat":20.15,"lon":36.50,"gpi":65},
+        {"id":"T-004","name":"الممر المخفي","lat":21.05,"lon":35.80,"gpi":95},
     ])
 
 DATA = load_data()
 
 # =====================================================
-# 🧠 GX MINING ENGINE (Predictive Core)
+# 🧠 INDUSTRIAL GEO ENGINE
 # =====================================================
-def gx_mining_engine(text):
+def industrial_engine(text, lat=None, lon=None):
     t = text.lower()
 
-    structure = any(x in t for x in ["fault","shear","كسر","فالق"])
-    quartz = any(x in t for x in ["quartz","كوارتز","عرق"])
-    alteration = any(x in t for x in ["clay","swir","alteration","تحوير"])
-    cluster_hint = any(x in t for x in ["cluster","تجمع","عدة","نقاط"])
+    # Structural indicators
+    structure = sum([t.count(x) for x in ["fault","shear","فالق","كسر","lineament"]])
+    quartz = sum([t.count(x) for x in ["quartz","كوارتز","عرق"]])
+    alteration = sum([t.count(x) for x in ["clay","swir","alteration","تحوير"]])
 
-    score = 0
-    signals = []
+    # Base scoring (industrial weighted model)
+    score = (
+        structure * 40 +
+        quartz * 35 +
+        alteration * 30
+    )
 
-    if structure:
-        score += 40
-        signals.append("STRUCTURE")
+    # Cluster enhancement (industrial logic)
+    cluster_bonus = 0
+    if structure > 0 and quartz > 0:
+        cluster_bonus = 15
 
-    if quartz:
-        score += 30
-        signals.append("QUARTZ VEIN")
+    score += cluster_bonus
 
-    if alteration:
-        score += 25
-        signals.append("ALTERATION")
+    # Normalize
+    score = min(100, score)
 
-    if cluster_hint:
-        score += 15
-        signals.append("CLUSTER")
-
-    # Depth inference (simplified geological logic)
-    if score >= 80:
-        depth = "0–20m (High-grade near surface)"
-        decision = "🟢 TARGET-A (EXPAND MINING ZONE)"
-    elif score >= 50:
-        depth = "20–50m (Exploration drilling required)"
-        decision = "🟡 TARGET-B (TEST ZONE)"
+    # Depth model (industrial approximation)
+    if score > 80:
+        depth = "0–20m (High-grade shallow system)"
+        decision = "🟢 INDUSTRIAL TARGET A"
+    elif score > 50:
+        depth = "20–60m (Drilling required)"
+        decision = "🟡 INDUSTRIAL TARGET B"
     else:
-        depth = ">50m or weak system"
-        decision = "🔴 REJECT / KILL ZONE"
+        depth = ">60m / weak system"
+        decision = "🔴 REJECT ZONE"
 
-    return score, signals, depth, decision
+    return score, depth, decision
 
 # =====================================================
 # 📊 SIDEBAR
 # =====================================================
 with st.sidebar:
-    st.title("🛰️ GX MINING CONTROL")
-    st.write(f"🔐 القفل: {SYSTEM_LOCK}")
-    menu = st.radio("القائمة", [
-        "🏠 لوحة القيادة",
-        "🗺️ خريطة الأقمار الصناعية",
-        "📊 التحليل التنبؤي",
-        "🧠 محرك GX",
-        "📖 دليل التعدين"
+    st.title("GX INDUSTRIAL CONTROL")
+    st.write(f"LOCK: {SYSTEM_LOCK}")
+
+    menu = st.radio("Navigation", [
+        "Dashboard",
+        "Satellite Layer",
+        "Industrial Analytics",
+        "GX Engine",
+        "Mining Protocols"
     ])
 
 # =====================================================
 # 🏠 DASHBOARD
 # =====================================================
-if menu == "🏠 لوحة القيادة":
-    st.header("📊 لوحة التعدين الذكي")
+if menu == "Dashboard":
+    st.header("Industrial Overview")
 
     c1,c2,c3 = st.columns(3)
-    c1.metric("عدد الأهداف", len(DATA))
-    c2.metric("أعلى GPI", DATA["gpi"].max())
-    c3.metric("النظام", "GX OFFLINE CORE")
-
-    st.info("تحليل يعتمد على البنية + العروق + التحوير + التجمعات")
+    c1.metric("Targets", len(DATA))
+    c2.metric("Max GPI", DATA["gpi"].max())
+    c3.metric("Mode", "INDUSTRIAL CORE")
 
 # =====================================================
-# 🗺️ SATELLITE MAP + TOPOGRAPHY
+# 🛰️ SATELLITE LAYER
 # =====================================================
-elif menu == "🗺️ خريطة الأقمار الصناعية":
-    st.header("🛰️ طبقات تضاريس + أقمار صناعية")
+elif menu == "Satellite Layer":
+    st.header("Satellite + Terrain Layers")
 
     m = folium.Map(location=[19.5,36.5], zoom_start=6, tiles="Stamen Terrain")
 
@@ -170,12 +163,12 @@ elif menu == "🗺️ خريطة الأقمار الصناعية":
     folium.TileLayer("Stamen Terrain").add_to(m)
 
     for _,r in DATA.iterrows():
-        color = "red" if r["type"]=="A" else "orange"
+        color = "red" if r["gpi"]>85 else "orange"
 
         folium.Marker(
             [r["lat"],r["lon"]],
-            popup=f"{r['name']} | GPI {r['gpi']}",
-            tooltip="Target Zone",
+            tooltip=r["name"],
+            popup=f"GPI {r['gpi']}",
             icon=folium.Icon(color=color)
         ).add_to(m)
 
@@ -183,66 +176,65 @@ elif menu == "🗺️ خريطة الأقمار الصناعية":
     st_folium(m, height=600)
 
 # =====================================================
-# 📊 ANALYTICS
+# 📊 INDUSTRIAL ANALYTICS
 # =====================================================
-elif menu == "📊 التحليل التنبؤي":
-    st.header("📊 نموذج GPI + Prediction")
+elif menu == "Industrial Analytics":
+    st.header("Multi-Factor GPI Engine")
 
-    fig = px.bar(
-        DATA,
-        x="id",
-        y="gpi",
-        color="type",
-        title="Gold Potential Index (GPI)"
-    )
+    df = DATA.copy()
 
+    df["cluster_score"] = np.where(df["gpi"] > 85, 20, 10)
+    df["final_score"] = df["gpi"] + df["cluster_score"]
+
+    fig = px.bar(df, x="id", y="final_score", color="final_score")
     st.plotly_chart(fig, use_container_width=True)
-    st.dataframe(DATA)
+
+    st.dataframe(df)
 
 # =====================================================
 # 🧠 GX ENGINE
 # =====================================================
-elif menu == "🧠 محرك GX":
-    st.header("🧠 التحليل الجيولوجي الذكي (Offline)")
+elif menu == "GX Engine":
+    st.header("Industrial Geological Engine")
 
-    q = st.text_input("أدخل وصف جيولوجي (فالق / عرق كوارتز / تحوير / تجمع)")
+    q = st.text_area("Geological Input")
 
     if q:
-        score, signals, depth, decision = gx_mining_engine(q)
+        score, depth, decision = industrial_engine(q)
 
-        st.subheader("📊 النتائج")
+        st.subheader("RESULT")
         st.write("Score:", score)
-        st.write("Signals:", signals)
-        st.write("Depth:", depth)
+        st.write("Depth Model:", depth)
         st.success(decision)
 
 # =====================================================
-# 📖 FIELD MANUAL
+# 📖 PROTOCOLS
 # =====================================================
-elif menu == "📖 دليل التعدين":
-    st.header("📖 بروتوكولات التعدين")
+elif menu == "Mining Protocols":
+    st.header("Industrial Mining Logic")
 
     st.markdown("""
-### 🔴 KILL ZONE
-- غياب البنية الجيولوجية
-- عدم وجود عروق
+### 🟥 REJECT ZONE
+- No structure
+- No quartz veins
 
-### 🟡 TEST ZONE
-- مؤشرات جزئية
-- يحتاج عينات
+### 🟨 TEST ZONE
+- Partial structure
+- Weak alteration
 
-### 🟢 EXPAND ZONE
-- بنية قوية + كوارتز + تحوير
-- حفر مباشر
+### 🟩 INDUSTRIAL TARGET
+- Structure + Quartz + Alteration
+- Cluster presence
+- High GPI (>80)
 """)
 
 # =====================================================
 # FOOTER
 # =====================================================
 st.markdown("---")
-st.markdown("""
+st.markdown(f"""
 <center>
-© بوح التضاريس GX MINING v3.0<br>
-حقوق النظام محفوظة | المهندس أحمد أبو عزيزه الرشيدي
+🛰️ GX INDUSTRIAL ENGINE v4.0<br>
+{DEVELOPER} | ALL RIGHTS RESERVED
 </center>
 """, unsafe_allow_html=True)
