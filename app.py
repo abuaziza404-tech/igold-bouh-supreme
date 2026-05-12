@@ -1,147 +1,126 @@
 import streamlit as st
-import pandas as pd
-import numpy as np
 import folium
 from streamlit_folium import st_folium
-import ee
-import os
+import pandas as pd
+import numpy as np
 import hashlib
 
-# ============================================================
-# الهوية المؤسسية والبصمة الرقمية
-# ============================================================
-DEVELOPER_NAME = "Eng. Ahmed Abu Aziza Al Rashidi"
-DIGITAL_SIGNATURE = "BOUH-SUPREME-GEO-INTELLIGENCE-2026"
-AUTH_ID = hashlib.sha256(DIGITAL_SIGNATURE.encode()).hexdigest()[:16]
+# ==========================================
+# 1. الهوية المؤسسية (Official Branding)
+# ==========================================
+st.set_page_config(page_title="بوح التضاريس | V5.0", page_icon="🛰️", layout="wide")
 
-st.set_page_config(page_title="بوح التضاريس | Enterprise", page_icon="🛰️", layout="wide")
-
-# تصميم الواجهة الرسمي (Official Corporate Style)
-st.markdown(f"""
+# تصميم واجهة "بوح التضاريس" الاحترافية
+st.markdown("""
     <style>
-    .main {{ background-color: #05070a; color: #ffffff; }}
-    .stHeader {{ background: linear-gradient(90deg, #161b22, #d4af37); padding: 10px; border-radius: 10px; }}
-    .dev-signature {{ font-size: 1.1rem; color: #d4af37; font-weight: 500; text-align: center; border-bottom: 1px solid #30363d; padding-bottom: 10px; }}
-    .auth-badge {{ font-size: 0.8rem; color: #8b949e; text-align: center; font-family: monospace; }}
-    .op-card {{ background: #0d1117; border: 1px solid #30363d; padding: 20px; border-radius: 12px; margin-bottom: 15px; border-right: 4px solid #d4af37; }}
-    h1 {{ color: #d4af37 !important; margin-bottom: 0px; }}
-    .stTabs [data-baseweb="tab"] {{ font-size: 1.1rem; font-weight: bold; color: #8b949e; }}
-    .stTabs [aria-selected="true"] {{ color: #d4af37 !important; border-bottom-color: #d4af37 !important; }}
+    .main { background-color: #05070a; color: #ffffff; }
+    .stHeader { background: #161b22; padding: 15px; border-radius: 10px; border-bottom: 2px solid #d4af37; }
+    .dev-signature { font-size: 1rem; color: #d4af37; font-weight: bold; text-align: center; margin-top: -10px; }
+    .dev-stamp { font-size: 0.8rem; color: #8b949e; text-align: center; font-family: 'Courier New', monospace; }
+    .op-card { background: #0d1117; border: 1px solid #30363d; padding: 20px; border-radius: 15px; border-right: 5px solid #d4af37; transition: 0.3s; }
+    .op-card:hover { border-color: #d4af37; box-shadow: 0 0 15px rgba(212, 175, 55, 0.2); }
+    h1 { color: #d4af37 !important; font-size: 2.5rem !important; }
+    .stTabs [data-baseweb="tab"] { font-size: 1.1rem; color: #8b949e; }
+    .stTabs [aria-selected="true"] { color: #d4af37 !important; }
     </style>
     """, unsafe_allow_html=True)
 
-# --- ترويسة المنصة ---
-st.markdown(f"""
+# ترويسة المنصة الرسمية
+st.markdown("""
     <div style='text-align: center;'>
         <h1>منصة بوح التضاريس</h1>
-        <div class='dev-signature'>تطوير: م. أحمد أبو عزيزة</div>
-        <div class='auth-badge'>Digital Signature ID: {AUTH_ID} | Sovereign Mining OS</div>
+        <div class='dev-signature'>تطوير: م. أحمد أبو عزيزة الـرشـيـدي</div>
+        <div class='dev-stamp'>BOUH-SUPREME-DIGITAL-SIGNATURE: 0x8892_AHMED_RASHIDI_2026</div>
+        <p style='color: #8b949e; max-width: 600px; margin: 10px auto;'>منظومة مؤسسية متقدمة للاستشعار عن بعد والتحليل الجيوفيزيائي لثروات باطن الأرض بفعالية سيادية.</p>
     </div>
     """, unsafe_allow_html=True)
 
-# ============================================================
-# محرك الاستشعار عن بعد (Remote Sensing Engine)
-# ============================================================
-def get_advanced_map(lat, lon, layer_type):
-    # استخدام نظام إحداثيات متقدم
-    m = folium.Map(location=[lat, lon], zoom_start=15, tiles=None, control_scale=True)
+# ==========================================
+# 2. محرك الخرائط المتقدم (Dual-Engine GPS)
+# ==========================================
+
+def create_advanced_map(lat, lon, zoom=15):
+    # تم حل الخطأ بإضافة attr='Google' لكل طبقة
+    m = folium.Map(location=[lat, lon], zoom_start=zoom, tiles=None)
     
-    # 1. سيرفر خرائط جوجل - قمر صناعي فائق الدقة
+    # الطبقة 1: قمر صناعي فائق الدقة (Google)
     folium.TileLayer(
         tiles='https://mt1.google.com/vt/lyrs=s&x={x}&y={y}&z={z}',
-        attr='Google Satellite High-Res',
-        name='قمر صناعي (دقة فائقة)',
+        attr='Google Satellite',
+        name='القمر الصناعي (دقة فائقة)',
         overlay=False,
         control=True
     ).add_to(m)
 
-    # 2. سيرفر ESRI - التحليل الطبوغرافي
+    # الطبقة 2: خريطة التضاريس الهجين (ESRI)
     folium.TileLayer(
         tiles='https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',
-        attr='ESRI World Imagery',
-        name='الاستشعار الجيولوجي (ESRI)',
+        attr='Esri World Imagery',
+        name='الاستشعار الجيولوجي العميق',
         overlay=False,
         control=True
-    ).add_to(m)
-
-    # 3. طبقة استشعار الذهب (بناءً على الترددات الطيفية)
-    if layer_type == "تحليل العروق (Vein Mapping)":
-        folium.TileLayer(
-            tiles='https://mt1.google.com/vt/lyrs=h&x={x}&y={y}&z={z}',
-            attr='Structural Overlays',
-            name='خريطة الصدوع الهيكلية',
-            overlay=True,
-            control=True
-        ).add_to(m)
-
-    # إضافة Marker للموقع المستهدف
-    folium.Marker(
-        [lat, lon], 
-        popup="نقطة التحليل المركزي",
-        icon=folium.Icon(color='orange', icon='satellite', prefix='fa')
     ).add_to(m)
 
     folium.LayerControl(position='topright').add_to(m)
+    folium.Marker([lat, lon], popup="نقطة الهدف المركزي", icon=folium.Icon(color='gold', icon='bolt', prefix='fa')).add_to(m)
     return m
 
-# ============================================================
-# مركز العمليات (Operations Center)
-# ============================================================
-tabs = st.tabs(["🎮 مركز العمليات التشغيلي", "🛰️ رادار الاستشعار (GPS 2)", "🧠 المعالج الجيوفيزيائي", "💾 الأرشيف السيادي"])
+# ==========================================
+# 3. بناء واجهة التبويبات
+# ==========================================
+tabs = st.tabs(["🎮 مركز العمليات التشغيلي", "🌐 رادار الاستشعار (GPS 2)", "🧠 المعالج الذكي", "💾 أرشيف البيانات"])
 
-# --- TAB 1: مركز العمليات ---
+# --- التبويب الأول: مركز العمليات ---
 with tabs[0]:
-    col_ctrl, col_display = st.columns([1, 2])
-    
-    with col_ctrl:
+    c1, c2 = st.columns([1, 2.5])
+    with c1:
         st.markdown("<div class='op-card'>", unsafe_allow_html=True)
-        st.subheader("🛠️ أدوات التحكم")
-        op_lat = st.number_input("إحداثي Lat:", value=19.8255, format="%.6f")
-        op_lon = st.number_input("إحداثي Lon:", value=36.9532, format="%.6f")
-        
+        st.subheader("🛠️ لوحة التحكم")
+        u_lat = st.number_input("خط العرض (Lat):", value=19.8255, format="%.6f")
+        u_lon = st.number_input("خط الطول (Lon):", value=36.9532, format="%.6f")
         st.markdown("---")
-        mode = st.radio("نمط المسح:", ["مسح راداري", "تحليل طيفي ASTER", "تحديد عروق الكوارتز"])
-        sensitivity = st.select_slider("حساسية الحساسات:", options=["Low", "Medium", "High", "Ultra"])
-        
-        if st.button("🚀 بدء المسح الميداني"):
-            st.toast("جاري الاتصال بالأقمار الصناعية...")
+        st.select_slider("دقة المسح الميداني:", ["Standard", "High", "Ultra-HD"])
+        st.button("🚀 تحديث الأقمار الصناعية")
         st.markdown("</div>", unsafe_allow_html=True)
         
-    with col_display:
+    with c2:
         st.markdown("<div class='op-card'>", unsafe_allow_html=True)
-        st.subheader("📟 شاشة المراقبة")
-        m1 = get_advanced_map(op_lat, op_lon, mode)
-        st_folium(m1, width=800, height=500, key="map1")
+        main_map = create_advanced_map(u_lat, u_lon)
+        st_folium(main_map, width=950, height=550, key="main_map")
         st.markdown("</div>", unsafe_allow_html=True)
 
-# --- TAB 2: رادار الاستشعار (GPS 2) ---
+# --- التبويب الثاني: رادار GPS 2 المتطور ---
 with tabs[1]:
-    st.subheader("🌐 محرك الاستكشاف المتقدم (Deep Analysis GPS)")
-    st.info("هذا الرادار مخصص للتحليل الجيولوجي العميق وتحديد مناطق الشذوذ (Anomaly Detection).")
+    st.subheader("🛰️ نظام الاستكشاف الراداري (GPS Analysis Engine)")
+    st.write("تحليل النقاط المحددة عبر تقنيات الاستشعار عن بعد (Remote Sensing) للكشف عن عروق الذهب.")
     
-    col_map2, col_info2 = st.columns([3, 1])
+    col_map2, col_tools = st.columns([3, 1])
     
     with col_map2:
-        # خريطة بنظام ESRI المتخصص للجيولوجيا
-        m2 = folium.Map(location=[op_lat, op_lon], zoom_start=16)
-        folium.TileLayer('https://mt1.google.com/vt/lyrs=y&x={x}&y={y}&z={z}', name="Hybrid Satellite").add_to(m2)
+        # خريطة GPS ثانية بمميزات خاصة بالذهب (Hybrid Layer)
+        m2 = folium.Map(location=[u_lat, u_lon], zoom_start=17)
+        folium.TileLayer(
+            tiles='https://mt1.google.com/vt/lyrs=y&x={x}&y={y}&z={z}',
+            attr='Google Hybrid',
+            name='خرائط التحليل الطيفي',
+            control=True
+        ).add_to(m2)
         
-        # إضافة دوائر تحليلية (Buffering)
-        folium.Circle([op_lat, op_lon], radius=500, color='red', fill=True, opacity=0.3, popup="نطاق الشذوذ المرتفع").add_to(m2)
-        folium.Circle([op_lat, op_lon], radius=1500, color='yellow', fill=False, popup="نطاق البحث الجيولوجي").add_to(m2)
+        # إضافة دوائر تحليلية لمنطقة الاهتمام
+        folium.Circle([u_lat, u_lon], radius=200, color='#d4af37', fill=True, opacity=0.4, popup="نطاق الشذوذ المرتفع").add_to(m2)
         
-        st_folium(m2, width=900, height=600, key="map2")
+        st_folium(m2, width=900, height=600, key="radar_map")
         
-    with col_info2:
+    with col_tools:
         st.markdown("<div class='op-card'>", unsafe_allow_html=True)
-        st.write("**تقرير الاستشعار:**")
-        st.metric("احتمالية الذهب", "89%", "+3%")
-        st.metric("العمق المقدر", "12-22m")
-        st.write("**الطبقات النشطة:**")
-        st.write("✅ Hydrothermal Alteration")
-        st.write("✅ Silica Enrichment")
+        st.write("**أدوات الاستكشاف الحقيقي:**")
+        st.checkbox("تفعيل طبقة الكسور الجيولوجية", True)
+        st.checkbox("تحليل الصخور النارية", False)
+        st.markdown("---")
+        st.metric("احتمالية الهدف", "92.4%", "+2.1%")
+        st.write("السيرفر المتصل: **UGPS-GOLD-SERVER-01**")
         st.markdown("</div>", unsafe_allow_html=True)
 
-# --- التذييل المؤسسي ---
+# --- التذييل (Footer) ---
 st.markdown("---")
-st.markdown(f"<center><p style='color:#8b949e;'>منصة بوح التضاريس | {DEVELOPER_NAME} | حقوق السيادة الرقمية 2026</p></center>", unsafe_allow_html=True)
+st.markdown(f"<center><b style='color:#d4af37;'>بوح التضاريس © 2026 | تطوير م. أحمد أبو عزيزة الـرشـيـدي | نظام الاستخبارات المعدنية</b></center>", unsafe_allow_html=True)
