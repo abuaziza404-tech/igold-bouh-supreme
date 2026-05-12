@@ -4,186 +4,209 @@ import folium
 from streamlit_folium import st_folium
 import plotly.express as px
 
-from langchain_openai import ChatOpenAI
-from langchain_core.messages import SystemMessage, HumanMessage
-
-# ==========================================
-# 1. إعدادات المنصة
-# ==========================================
+# =====================================================
+# 🛰️ SYSTEM CONFIG
+# =====================================================
 st.set_page_config(
-    page_title="منظومة بوح التضاريس V100",
+    page_title="BOUH GX ENGINE v2.0",
     page_icon="🛰️",
     layout="wide"
 )
 
+SYSTEM_LOCK = "abuaziza2000"
+DEVELOPER = "أحمد أبو عزيزه الرشيدي"
+
+# =====================================================
+# 🎨 UI THEME
+# =====================================================
 st.markdown("""
 <style>
-.main { background-color: #0e1117; color: #ffffff; }
-.stButton>button { width: 100%; background-color: #FFD700; color: black; font-weight: bold; border-radius: 8px; border: none; }
-.stMetric { background-color: #1c1f26; border: 1px solid #FFD700; border-radius: 10px; padding: 15px; }
-.stSidebar { background-color: #1c1f26 !important; }
-h1, h2, h3 { color: #FFD700 !important; }
+.main { background-color: #0e1117; color: white; }
+.stButton>button { background:#FFD700; color:black; font-weight:bold; }
+h1,h2,h3 { color:#FFD700; }
 </style>
 """, unsafe_allow_html=True)
 
-# ==========================================
-# 2. البيانات المدمجة
-# ==========================================
-def load_integrated_data():
-    belts = [
-        {"name": "حزام أريب", "type": "Ophiolitic", "priority": "High"},
-        {"name": "حزام جبيت", "type": "Metamorphic", "priority": "High"},
-        {"name": "تلال البحر الأحمر", "type": "Shear Zone", "priority": "Medium"},
-        {"name": "الممر المخفي", "type": "Buried Arc", "priority": "Very High"}
-    ]
-
+# =====================================================
+# 📦 DATA CORE
+# =====================================================
+def load_data():
     targets = pd.DataFrame([
-        {"id": "T-001", "name": "أربعات", "lat": 19.82, "lon": 36.95, "gpi": 92, "class": "Target-A", "rec": "EXPAND"},
-        {"id": "T-002", "name": "سنكات", "lat": 18.84, "lon": 36.75, "gpi": 85, "class": "Target-A", "rec": "TEST"},
-        {"id": "T-003", "name": "جبيت", "lat": 20.15, "lon": 36.50, "gpi": 65, "class": "Target-B", "rec": "HOLD"},
-        {"id": "T-004", "name": "الممر", "lat": 21.05, "lon": 35.80, "gpi": 95, "class": "Target-A", "rec": "EXPAND"}
+        {"id":"T-001","name":"أربعات","lat":19.82,"lon":36.95,"gpi":92,"class":"A"},
+        {"id":"T-002","name":"سنكات","lat":18.84,"lon":36.75,"gpi":85,"class":"A"},
+        {"id":"T-003","name":"جبيت","lat":20.15,"lon":36.50,"gpi":65,"class":"B"},
+        {"id":"T-004","name":"الممر المخفي","lat":21.05,"lon":35.80,"gpi":95,"class":"A"},
     ])
-    return belts, targets
+    return targets
 
-BELTS, TARGETS_DF = load_integrated_data()
+TARGETS = load_data()
 
-# ==========================================
-# 3. الذكاء الاصطناعي
-# ==========================================
-def bouh_ai_engine(user_query):
-    try:
-        api_key = st.secrets.get("OPENAI_API_KEY", None)
-        if not api_key:
-            return "⚠️ OpenAI API Key غير موجود داخل Streamlit Secrets"
+# =====================================================
+# 🧠 GX ENGINE CORE (OFFLINE AI)
+# =====================================================
+def gx_engine(query):
+    q = query.lower()
 
-        llm = ChatOpenAI(
-            model="gpt-4o-mini",
-            api_key=api_key
-        )
+    structure = any(x in q for x in ["fault","shear","كسر","فالق","lineament"])
+    quartz = any(x in q for x in ["quartz","كوارتز","vein","عرق"])
+    clay = any(x in q for x in ["clay","swir","alteration","طين"])
+    weak = any(x in q for x in ["ضعيف","weak","لا يوجد"])
 
-        context = """
-أنت مساعد جيولوجي متخصص في استكشاف الذهب في شرق السودان.
-تعتمد على تحليل البنية، التحوير الحراري، وبيانات الاستشعار عن بعد.
-تصنيف الأهداف: Target-A / Target-B / Target-C.
-قراراتك: KILL / TEST / EXPAND.
-"""
+    score = 0
+    signals = []
 
-        messages = [
-            SystemMessage(content=context),
-            HumanMessage(content=user_query)
-        ]
+    if structure:
+        score += 40
+        signals.append("STRUCTURE")
 
-        response = llm.invoke(messages)
-        return response.content
+    if quartz:
+        score += 30
+        signals.append("QUARTZ")
 
-    except Exception as e:
-        return f"⚠️ خطأ في الذكاء الاصطناعي: {str(e)}"
+    if clay:
+        score += 25
+        signals.append("ALTERATION")
 
-# ==========================================
-# 4. القائمة الجانبية
-# ==========================================
+    if weak:
+        score -= 20
+        signals.append("WEAK SIGNAL")
+
+    # Decision Logic
+    if score >= 70:
+        decision = "🟢 TARGET-A (EXPAND)"
+    elif score >= 40:
+        decision = "🟡 TARGET-B (TEST)"
+    else:
+        decision = "🔴 REJECT (KILL)"
+
+    return {
+        "score": score,
+        "signals": signals,
+        "decision": decision
+    }
+
+# =====================================================
+# 🧭 SIDEBAR
+# =====================================================
 with st.sidebar:
-    st.image("https://img.icons8.com/fluency/96/satellite.png", width=80)
-    st.title("التحكم المركزي")
+    st.title("🛰️ BOUH GX ENGINE")
+    st.write(f"Developer: {DEVELOPER}")
+    st.write(f"System Lock: {SYSTEM_LOCK}")
 
-    menu = st.radio(
-        "القائمة",
-        ["🏠 الرئيسية", "🗺️ الخريطة", "📊 التحليل GPI", "🤖 المساعد", "📖 الدليل"]
-    )
+    menu = st.radio("Navigation", [
+        "🏠 Dashboard",
+        "🗺️ Map",
+        "📊 Analytics",
+        "🧠 GX Assistant",
+        "📖 Field Manual"
+    ])
 
-    st.markdown("---")
-    st.write("الحالة: متصل")
-    st.write("النظام: V100")
+# =====================================================
+# 🏠 DASHBOARD
+# =====================================================
+if menu == "🏠 Dashboard":
+    st.title("BOUH GX ENGINE v2.0")
 
-# ==========================================
-# 5. الصفحات
-# ==========================================
-if menu == "🏠 الرئيسية":
-    st.header("🛰️ بوح التضاريس V100")
+    col1,col2,col3 = st.columns(3)
+    col1.metric("Targets", len(TARGETS))
+    col2.metric("Max GPI", TARGETS["gpi"].max())
+    col3.metric("System", "OFFLINE CORE")
 
-    col1, col2, col3 = st.columns(3)
-    col1.metric("الأهداف", len(TARGETS_DF))
-    col2.metric("أعلى GPI", f"{TARGETS_DF['gpi'].max()}%")
-    col3.metric("الأحزمة", len(BELTS))
+    st.info("Rule-Based Geological Intelligence Active")
 
-    st.info("تحليل متعدد الطبقات: Sentinel-2 + ASTER + DEM")
+# =====================================================
+# 🗺️ MAP ENGINE
+# =====================================================
+elif menu == "🗺️ Map":
+    st.title("Geological Map")
 
-elif menu == "🗺️ الخريطة":
-    st.header("🗺️ الخريطة الجيولوجية")
+    m = folium.Map(location=[19.5,36.5], zoom_start=6, tiles="CartoDB dark_matter")
 
-    m = folium.Map(location=[19.5, 36.5], zoom_start=7, tiles="CartoDB dark_matter")
-
-    for _, row in TARGETS_DF.iterrows():
-        color = "red" if row["class"] == "Target-A" else "orange"
+    for _,r in TARGETS.iterrows():
+        color = "red" if r["class"]=="A" else "orange"
 
         folium.Marker(
-            [row["lat"], row["lon"]],
-            tooltip=row["name"],
-            popup=f"{row['id']} | GPI: {row['gpi']}",
+            [r["lat"],r["lon"]],
+            tooltip=r["name"],
+            popup=f"{r['id']} | GPI {r['gpi']}",
             icon=folium.Icon(color=color)
         ).add_to(m)
 
     st_folium(m, height=550)
 
-elif menu == "📊 التحليل GPI":
-    st.header("📊 تحليل GPI")
+# =====================================================
+# 📊 ANALYTICS
+# =====================================================
+elif menu == "📊 Analytics":
+    st.title("GPI Analysis")
 
     fig = px.bar(
-        TARGETS_DF,
+        TARGETS,
         x="id",
         y="gpi",
         color="class",
-        color_discrete_map={"Target-A": "#FFD700", "Target-B": "#C0C0C0"},
-        title="GPI Classification"
+        title="GPI Distribution"
     )
 
     st.plotly_chart(fig, use_container_width=True)
-    st.dataframe(TARGETS_DF)
 
-elif menu == "🤖 المساعد":
-    st.header("🤖 المساعد الجيولوجي")
+    st.dataframe(TARGETS)
+
+# =====================================================
+# 🧠 GX ASSISTANT (OFFLINE)
+# =====================================================
+elif menu == "🧠 GX Assistant":
+    st.title("GX ENGINE Assistant")
 
     if "chat" not in st.session_state:
         st.session_state.chat = []
 
-    for msg in st.session_state.chat:
-        with st.chat_message(msg["role"]):
-            st.markdown(msg["content"])
+    for c in st.session_state.chat:
+        with st.chat_message(c["role"]):
+            st.markdown(c["content"])
 
-    prompt = st.chat_input("اسأل عن التراكيب أو الأهداف...")
+    q = st.chat_input("Ask geological query...")
 
-    if prompt:
-        st.session_state.chat.append({"role": "user", "content": prompt})
+    if q:
+        result = gx_engine(q)
 
-        with st.chat_message("user"):
-            st.markdown(prompt)
+        response = f"""
+📊 SCORE: {result['score']}
+🔎 SIGNALS: {', '.join(result['signals'])}
+📍 DECISION: {result['decision']}
+"""
 
-        response = bouh_ai_engine(prompt)
-
-        st.session_state.chat.append({"role": "assistant", "content": response})
+        st.session_state.chat.append({"role":"user","content":q})
+        st.session_state.chat.append({"role":"assistant","content":response})
 
         with st.chat_message("assistant"):
             st.markdown(response)
 
-elif menu == "📖 الدليل":
-    st.header("📖 بروتوكولات القرار")
+# =====================================================
+# 📖 FIELD MANUAL
+# =====================================================
+elif menu == "📖 Field Manual":
+    st.title("Field Decision System")
 
-    tab1, tab2, tab3 = st.tabs(["KILL", "TEST", "EXPAND"])
+    tab1,tab2,tab3 = st.tabs(["KILL","TEST","EXPAND"])
 
     with tab1:
-        st.error("إيقاف الهدف عند ضعف المؤشرات الجيولوجية")
+        st.error("No structure or weak signals → STOP")
 
     with tab2:
-        st.warning("اختبار ميداني وتحليل عينات")
+        st.warning("Partial indicators → Field sampling required")
 
     with tab3:
-        st.success("توسيع العمل عند تأكيد العروق")
+        st.success("Strong structure + quartz + alteration → Drill expansion")
 
-# ==========================================
-# 6. Footer
-# ==========================================
+# =====================================================
+# FOOTER
+# =====================================================
 st.markdown("---")
-st.markdown(
-    "<center>BOUH SUPREME V100 | Geological Intelligence System</center>",
-    unsafe_allow_html=True
-)
+st.markdown(f"""
+<center>
+🛰️ BOUH GX ENGINE v2.0 <br>
+Developer: {DEVELOPER} <br>
+SYSTEM LOCK: {SYSTEM_LOCK}
+</center>
+""", unsafe_allow_html=True)
