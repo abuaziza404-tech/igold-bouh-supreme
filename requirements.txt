@@ -1,8 +1,8 @@
-streamlit==1.32.0
-folium==0.16.0
-streamlit-folium==0.18.0
-earthengine-api==0.1.390
-pydeck==0.8.0
-rasterio==1.3.9
-dask==2024.2.0
-pyproj==3.6.1
+streamlit
+folium
+streamlit-folium
+pydeck
+pandas
+numpy
+whitebox
+opencv-python-headless
