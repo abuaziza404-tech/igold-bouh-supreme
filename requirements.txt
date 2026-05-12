@@ -1,8 +1,10 @@
-streamlit
+setuptools
+streamlit==1.32.0
 pandas
 numpy
 folium
 streamlit-folium
-rasterio
+earthengine-api
+geemap
 scikit-learn
-simplekml
+plotly
