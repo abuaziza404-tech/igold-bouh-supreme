@@ -1,179 +1,112 @@
 import streamlit as st
-import pandas as pd
-import numpy as np
-import folium
-import hashlib
-import sqlite3
-import simplekml
-from datetime import datetime
-from streamlit_folium import st_folium
-from sklearn.ensemble import RandomForestClassifier
+import os
+import time
 
-# ==========================================
-# 1. الهوية البصرية والنمط الوزاري (UI/UX)
-# ==========================================
-st.set_page_config(page_title="بوح التضاريس | BOUH ALTADARIS", layout="wide", page_icon="🛰️")
+# --- حل مشكلة قواعد البيانات للسيرفر ---
+try:
+    __import__("pysqlite3")
+    import sys
+    sys.modules["sqlite3"] = sys.modules.pop("pysqlite3")
+except ImportError:
+    pass
 
+# --- استدعاء محركات الذكاء والتحليل ---
+from langchain_openai import ChatOpenAI
+from langchain_core.messages import HumanMessage
+
+# --- إعدادات الواجهة السيادية (وزارية - ذهبي وأسود) ---
+st.set_page_config(page_title="BOUH ALTADARIS V100", page_icon="🛰️", layout="wide")
+
+# الربط مع المفتاح السري
+if "OPENAI_API_KEY" in st.secrets:
+    os.environ["OPENAI_API_KEY"] = st.secrets["OPENAI_API_KEY"]
+
+# --- التنسيق البصري (Sovereign CSS) ---
 st.markdown("""
     <style>
-    .main { background-color: #05070a; color: #e6e6e6; }
-    .stTabs [data-baseweb="tab-list"] { gap: 24px; }
-    .stTabs [data-baseweb="tab"] { height: 50px; white-space: pre-wrap; background-color: #121820; border-radius: 5px; color: #d4af37; }
-    .gold-header {
-        background: linear-gradient(135deg, #000, #1a1a1a);
-        padding: 30px; border-radius: 15px; border-bottom: 3px solid #d4af37;
-        text-align: center; margin-bottom: 25px;
-    }
-    .poem { font-family: 'Amiri', serif; color: #d4af37; font-size: 1.2rem; font-style: italic; }
-    .status-box { border: 1px solid #d4af37; padding: 10px; border-radius: 8px; background: #0e1117; }
+    .main { background-color: #0b0d11; color: #e0e0e0; }
+    .stButton>button { background-color: #b8860b; color: white; border-radius: 5px; font-weight: bold; border: 1px solid #ffd700; }
+    .stTextInput>div>div>input { background-color: #1a1c23; color: gold; }
+    .sidebar .sidebar-content { background-color: #11141a; }
+    h1, h2, h3 { color: #ffd700; font-family: 'Times New Roman', serif; }
+    .poetry { font-style: italic; color: #8b8b8b; text-align: center; font-size: 0.9em; }
     </style>
-""", unsafe_allow_html=True)
+    """, unsafe_allow_html=True)
 
-# ==========================================
-# 2. إدارة البيانات والأمن
-# ==========================================
-DB_PATH = "bouh_enterprise_v2.db"
-SIGNATURE = "ENG_AHMED_ABU_AZIZA_AL_RASHIDI_2026"
-ACCESS_KEY = "abuaziza2000"
+# --- الهوية الرسمية ---
+col_h1, col_h2 = st.columns([3, 1])
+with col_h1:
+    st.title("🛰️ منظومة بوح التضاريس | BOUH ALTADARIS")
+    st.subheader("نظام الاستخبارات الجيولوجية السيادي - الفئة المؤسسية")
+with col_h2:
+    st.markdown(f"<p style='text-align:right; color:gold;'>المهندس أحمد أبو عزيزة الرشيدي<br>V100 Production Ready</p>", unsafe_allow_html=True)
 
-def init_db():
-    conn = sqlite3.connect(DB_PATH)
-    conn.execute("""CREATE TABLE IF NOT EXISTS targets 
-                 (id INTEGER PRIMARY KEY, date TEXT, lat REAL, lon REAL, gpi REAL, 
-                 decision TEXT, formation TEXT, engineer TEXT)""")
-    conn.close()
+# --- محرك القرار (GPI Engine) ---
+def calculate_gpi(structure, pattern, alteration, quartz, cluster, terrain, context):
+    score = (structure * 0.30) + (pattern * 0.20) + (alteration * 0.15) + \
+            (quartz * 0.10) + (cluster * 0.10) + (terrain * 0.10) + (context * 0.05)
+    return round(score, 2)
 
-init_db()
-
-# ==========================================
-# 3. محرك الـ GPI السباعي المتقدم
-# ==========================================
-def calculate_advanced_gpi(s, p, a, q, c, t, ctx):
-    # GPI = 0.30S + 0.20P + 0.15A + 0.10Q + 0.10Clust + 0.10Terr + 0.05Cont
-    score = (s*0.30) + (p*0.20) + (a*0.15) + (q*0.10) + (c*0.10) + (t*0.10) + (ctx*0.05)
-    return round(score, 4)
-
-def get_decision(gpi, structure, pattern):
-    if structure < 0.55 or pattern < 0.50: return "REJECT (No Structural Control)"
-    if gpi >= 0.88: return "👑 DRILL (Elite Target)"
-    if gpi >= 0.75: return "⛏️ TRENCH (High Priority)"
-    if gpi >= 0.55: return "📡 MONITOR (Hold/Validate)"
-    return "❌ REJECT"
-
-# ==========================================
-# 4. واجهة المستخدم الرئيسية
-# ==========================================
-
-# الهيدر الرسمي
-st.markdown(f"""
-<div class="gold-header">
-    <h1 style="color:#d4af37; margin:0;">بوح التضاريس | BOUH ALTADARIS</h1>
-    <h3 style="color:#ffffff;">Autonomous Geological Intelligence Operating System</h3>
-    <p class="poem">"لمعة ذهب بين الصخر والتضاريس .. مضمونها سيرة عظيم النزاهه"</p>
-    <p style="color:#888;">Engineer: Ahmed Abu Aziza Al Rashidi</p>
-</div>
-""", unsafe_allow_html=True)
-
-# التحقق من الدخول
+# --- لوحة التحكم الجانبية ---
 with st.sidebar:
-    st.image("https://cdn-icons-png.flaticon.com/512/6009/6009026.png", width=100)
-    st.header("🔐 الدخول السيادي")
-    pwd = st.text_input("رمز الوصول", type="password")
-    if pwd != ACCESS_KEY:
-        st.error("Access Denied")
-        st.stop()
-    st.success("Sovereign Access Granted")
-    st.markdown("---")
-    st.info(f"System Status: ONLINE\n\nAI Oracle: ACTIVE\n\nGPS Sync: READY")
+    st.image("https://cdn-icons-png.flaticon.com/512/2092/2092030.png", width=100)
+    st.header("🔐 الوصول السيادي")
+    pwd = st.text_input("رمز الدخول (Digital Signature)", type="password")
+    
+    if pwd == "abuaziza2000":
+        st.success("✅ تم التحقق: المهندس أحمد أبو عزيزة")
+        mode = st.radio("وضع المحرك", ["المساعد الذكي (AI Oracle)", "المسح الطيفي الموحد", "إدارة الأهداف الميدانية"])
+        st.divider()
+        st.markdown("### 🗺️ تغطية النطاق")
+        st.info("النطاق الحالي: أربعات - تلال البحر الأحمر")
 
-# الأقسام الرئيسية (Tabs)
-tab_main, tab_geo, tab_ai, tab_map, tab_archive = st.tabs([
-    "🚀 مركز الاستكشاف", "🛰️ المعالج الطيفي", "🧠 AI Oracle", "🌍 الخارطة السيادية", "💾 الأرشيف"
-])
-
-# --- القسم الأول: مركز الاستكشاف ---
-with tab_main:
-    col1, col2 = st.columns([1, 1])
-    with col1:
-        st.subheader("📥 مدخلات التحليل الميداني")
-        c_lat = st.number_input("خط العرض (Lat)", value=19.3500, format="%.6f")
-        c_lon = st.number_input("خط الطول (Lon)", value=35.8500, format="%.6f")
+# --- واجهة التشغيل ---
+if pwd == "abuaziza2000":
+    if mode == "المساعد الذكي (AI Oracle)":
+        st.header("🧠 المساعد الجيولوجي الذكي (Geological Oracle)")
+        st.write("اسأل المساعد عن معادلات التحوير، أو تحليل إحداثيات، أو استشارة في عروق المرو.")
         
-        st.markdown("**مصفوفة الاحتمالات (0.0 - 1.0):**")
-        s_val = st.slider("Structure (البنية)", 0.0, 1.0, 0.85)
-        p_val = st.slider("Pattern (النمط الجيومتري)", 0.0, 1.0, 0.70)
-        a_val = st.slider("Alteration (التحوير الطيفي)", 0.0, 1.0, 0.75)
-        q_val = st.slider("Quartz (كثافة المرو)", 0.0, 1.0, 0.80)
-        cl_val = st.slider("Cluster (التجمع العنقودي)", 0.0, 1.0, 0.60)
-        t_val = st.slider("Terrain (الطبوغرافيا)", 0.0, 1.0, 0.50)
-        ctx_val = st.slider("Context (السياق العام)", 0.0, 1.0, 0.65)
-        
-        run = st.button("🏁 تشغيل محرك التنبؤ V2.0")
+        user_query = st.chat_input("أدخل تساؤلك الجيولوجي هنا...")
+        if user_query:
+            with st.chat_message("user"): st.write(user_query)
+            with st.chat_message("assistant"):
+                with st.spinner("جاري التحليل وفق عقيدة بوح التضاريس..."):
+                    try:
+                        llm = ChatOpenAI(model="gpt-4o")
+                        response = llm.invoke([HumanMessage(content=f"أنت خبير جيولوجي في نظام بوح التضاريس للمهندس أحمد أبو عزيزة. أجب وفق العقيدة الجيولوجية للنظام: {user_query}")])
+                        st.write(response.content)
+                    except Exception as e:
+                        st.error("يرجى التأكد من صلاحية مفتاح OpenAI")
 
-    with col2:
-        if run:
-            score = calculate_advanced_gpi(s_val, p_val, a_val, q_val, cl_val, t_val, ctx_val)
-            decision = get_decision(score, s_val, p_val)
+    elif mode == "المسح الطيفي الموحد":
+        st.header("📡 مركز معالجة المشاهد (Multi-Spectral Hub)")
+        col_up, col_res = st.columns([2, 1])
+        
+        with col_up:
+            files = st.file_uploader("ارفع مشاهد الأقمار الصناعية أو ملفات ZIP الميدانية", accept_multiple_files=True)
+            if files:
+                st.success(f"تم استقبال {len(files)} ملفات. جاهز للاستخراج آلياً.")
+                
+        with col_res:
+            st.markdown("### 🔢 محاكي GPI الذكي")
+            s = st.slider("كثافة البنية (Structure)", 0.0, 1.0, 0.5)
+            a = st.slider("مؤشر التحوير (Alteration)", 0.0, 1.0, 0.5)
+            q = st.slider("مؤشر الكوارتز (Quartz)", 0.0, 1.0, 0.5)
             
-            st.markdown(f"""
-            <div style="background:#121820; padding:25px; border-radius:15px; border:2px solid #d4af37;">
-                <h2 style="color:#d4af37; text-align:center;">{decision}</h2>
-                <hr>
-                <h1 style="text-align:center; color:white;">GPI: {score}</h1>
-                <p><b>التشكيل المتوقع:</b> Hydrothermal Shear Zone</p>
-                <p><b>نسبة الثقة:</b> {int(score*100)}%</p>
-            </div>
-            """, unsafe_allow_html=True)
+            result = calculate_gpi(s, 0.8, a, q, 0.7, 0.6, 0.9)
+            st.metric("مؤشر احتمالية الذهب (GPI Score)", result)
             
-            # حفظ في الأرشيف تلقائياً
-            conn = sqlite3.connect(DB_PATH)
-            conn.execute("INSERT INTO targets (date, lat, lon, gpi, decision, formation, engineer) VALUES (?,?,?,?,?,?,?)",
-                         (datetime.now().strftime("%Y-%m-%d %H:%M"), c_lat, c_lon, score, decision, "Shear-Hosted Gold", "Ahmed AlRashidi"))
-            conn.commit()
-            conn.close()
-            st.success("✅ تم أرشفة الهدف وإرسال الإشعارات")
+            if result >= 0.88:
+                st.error("🔥 STATUS: DRILL TARGET (أولوية قصوى)")
+            elif result >= 0.75:
+                st.warning("⚒️ STATUS: TRENCH (تحتاج تخندق)")
+            else:
+                st.info("🔍 STATUS: MONITOR (مراقبة)")
 
-# --- القسم الثالث: AI Oracle (المساعد الذكي) ---
-with tab_ai:
-    st.subheader("🧠 المساعد الجيولوجي الذكي (BOUH AI)")
-    st.info("هذا المساعد مبرمج وفق عقيدة (No Structure = Reject)")
-    
-    if "messages" not in st.session_state:
-        st.session_state.messages = []
+    # --- التذييل الرسمي ---
+    st.divider()
+    st.markdown("<p class='poetry'>لمعة ذهب بين الصخر والتضاريس .. مضمونها سيرة عظيم النزاهه</p>", unsafe_allow_html=True)
+    st.markdown(f"<p style='text-align:center; font-size:0.8em;'>إصدار مؤسسي V100 - جميع الحقوق محفوظة للمهندس أحمد أبو عزيزة الرشيدي</p>", unsafe_allow_html=True)
 
-    for message in st.session_state.messages:
-        with st.chat_message(message["role"]):
-            st.markdown(message["content"])
-
-    if prompt := st.chat_input("اسأل الأوراكل عن تحليل المنطقة..."):
-        st.session_state.messages.append({"role": "user", "content": prompt})
-        with st.chat_message("user"):
-            st.markdown(prompt)
-        
-        with st.chat_message("assistant"):
-            # هنا يتم الربط مع OpenAI API باستخدام مفتاحك المرفق سابقاً
-            response = "بصفتي المساعد الذكي لبوح التضاريس، أحلل طلبك... بناءً على المعطيات: يجب التركيز على تقاطع الصدوع NW-SE مع تواجد عروق المرو المدخنة."
-            st.markdown(response)
-            st.session_state.messages.append({"role": "assistant", "content": response})
-
-# --- القسم الرابع: الخارطة ---
-with tab_map:
-    st.subheader("🌍 خارطة العمليات الميدانية")
-    m = folium.Map(location=[19.35, 35.85], zoom_start=6, tiles="CartoDB dark_matter")
-    # استرجاع الأهداف من القاعدة
-    conn = sqlite3.connect(DB_PATH)
-    df = pd.read_sql_query("SELECT * FROM targets", conn)
-    conn.close()
-    
-    for idx, row in df.iterrows():
-        folium.Marker(
-            [row['lat'], row['lon']],
-            popup=f"GPI: {row['gpi']} | {row['decision']}",
-            icon=folium.Icon(color="orange" if "DRILL" in row['decision'] else "blue")
-        ).add_to(m)
-    
-    st_folium(m, width="100%", height=600)
-
-# الفوتر المؤسسي
-st.markdown("---")
-st.markdown(f"<center><b>BOUH ALTADARIS SYSTEM V2.0</b><br>Sovereign Mining OS © 2026<br>{hashlib.sha256(SIGNATURE.encode()).hexdigest()[:32]}</center>", unsafe_allow_html=True)
+else:
+    st.warning("🔒 نظام 'بوح التضاريس' مغلق. يرجى إدخال التوقيع الرقمي للبدء.")
