@@ -1,11 +1,10 @@
+setuptools
 streamlit==1.32.0
 pandas==2.2.1
 folium==0.16.0
 streamlit-folium==0.18.0
 earthengine-api==0.1.390
 geemap==0.32.1
-setuptools
-typing-extensions
 plotly==5.19.0
 langchain-openai==0.0.8
 langchain==0.1.11
