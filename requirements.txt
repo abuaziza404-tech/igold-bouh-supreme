@@ -14,3 +14,5 @@ langchain-text-splitters
 reportlab
 pysqlite3-binary
 simplekml
+geopandas
+shapely
