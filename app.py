@@ -1,251 +1,195 @@
-# =========================================================
-# 🛰️ BOUH GX MINING ENTERPRISE LEVEL v5.0
-# Enterprise Geological Intelligence Platform
-# Developer: أحمد أبو عزيزه الرشيدي
-# LOCK: abuaziza2000
-# =========================================================
-
 import streamlit as st
 import pandas as pd
-import folium
 import numpy as np
+import folium
 
 from streamlit_folium import st_folium
-import plotly.express as px
 
 # =========================================================
-# ⚙️ PAGE CONFIG
+# CONFIG
 # =========================================================
 st.set_page_config(
-    page_title="بوح التضاريس | GX ENTERPRISE",
+    page_title="بوح التضاريس",
     page_icon="🛰️",
     layout="wide",
     initial_sidebar_state="expanded"
 )
 
 # =========================================================
-# 🔐 SYSTEM CORE
+# SECURITY
 # =========================================================
-SYSTEM_LOCK = "abuaziza2000"
-SYSTEM_NAME = "BOUH GX MINING ENTERPRISE"
-VERSION = "v5.0"
-DEVELOPER = "أحمد أبو عزيزه الرشيدي"
+LOCK_PASSWORD = st.secrets["APP_PASSWORD"]
+
+if "authenticated" not in st.session_state:
+    st.session_state.authenticated = False
+
+if not st.session_state.authenticated:
+
+    st.markdown("# 🔐 Secure Access")
+
+    password = st.text_input(
+        "رمز الدخول",
+        type="password"
+    )
+
+    if st.button("دخول"):
+
+        if password == LOCK_PASSWORD:
+            st.session_state.authenticated = True
+            st.rerun()
+
+        else:
+            st.error("رمز غير صحيح")
+
+    st.stop()
 
 # =========================================================
-# 🎨 ENTERPRISE UI FIXES
-# إصلاح الأحرف العمودية + RTL + تنظيم الواجهة
+# STYLE FIX
 # =========================================================
 st.markdown("""
 <style>
 
-/* ===== ROOT ===== */
-html, body, [class*="css"] {
+html, body {
     direction: rtl;
     text-align: right;
-    font-family: "Tahoma", sans-serif;
+    background-color: #0B0F14;
 }
 
-/* ===== MAIN ===== */
+[data-testid="stAppViewContainer"] {
+    direction: rtl;
+}
+
 .main {
     background-color: #0B0F14;
-    color: #FFFFFF;
+    color: white;
 }
 
-/* إزالة مشاكل الخطوط العمودية */
 .block-container {
-    padding-top: 1.5rem;
-    padding-bottom: 1rem;
+    padding-top: 1rem;
 }
 
 section[data-testid="stSidebar"] {
     background-color: #111827;
-    border-left: 1px solid #2D3748;
 }
 
-/* ===== TITLES ===== */
-.enterprise-title {
+.title-main {
+    text-align: center;
     font-size: 42px;
-    font-weight: 800;
     color: #D4AF37;
-    text-align: center;
-    margin-bottom: 5px;
-}
-
-.enterprise-subtitle {
-    font-size: 18px;
-    color: #E5E7EB;
-    text-align: center;
-    margin-bottom: 3px;
-}
-
-.enterprise-lock {
-    text-align: center;
-    color: #EF4444;
     font-weight: bold;
-    margin-bottom: 15px;
 }
 
-/* ===== POETRY ===== */
-.poetry-box {
-    background: #000000;
+.subtitle {
+    text-align: center;
+    color: #E5E7EB;
+    font-size: 18px;
+}
+
+.poetry {
+    background: black;
+    color: #D4AF37;
     border: 1px solid #D4AF37;
     border-radius: 10px;
-    padding: 14px;
+    padding: 12px;
     text-align: center;
-    color: #D4AF37;
-    font-size: 18px;
+    margin-top: 10px;
     margin-bottom: 20px;
 }
 
-/* ===== CARDS ===== */
-.metric-card {
-    background: #111827;
-    border: 1px solid #2D3748;
-    border-radius: 14px;
-    padding: 20px;
-}
-
-/* ===== HEADERS ===== */
-h1, h2, h3 {
+h1,h2,h3 {
     color: #D4AF37 !important;
-    font-weight: 700 !important;
 }
 
-/* ===== BUTTONS ===== */
 .stButton>button {
     background-color: #D4AF37;
     color: black;
+    border-radius: 8px;
     font-weight: bold;
-    border-radius: 10px;
-    border: none;
     width: 100%;
-}
-
-/* ===== INPUTS ===== */
-.stTextInput input,
-.stTextArea textarea {
-    background-color: #111827;
-    color: white;
-    border-radius: 10px;
-}
-
-/* ===== DATAFRAME ===== */
-[data-testid="stDataFrame"] {
-    border-radius: 10px;
-}
-
-/* ===== FOOTER ===== */
-.footer-box {
-    text-align: center;
-    color: #9CA3AF;
-    padding: 15px;
-    font-size: 14px;
 }
 
 </style>
 """, unsafe_allow_html=True)
 
 # =========================================================
-# 🛰️ HEADER
+# HEADER
 # =========================================================
-st.markdown(f"""
-<div class="enterprise-title">
-🛰️ بوح التضاريس | GX MINING ENTERPRISE
+st.markdown("""
+<div class='title-main'>
+🛰️ بوح التضاريس
 </div>
 
-<div class="enterprise-subtitle">
-منصة استخبارات جيولوجية واستكشاف تعديني متقدم
+<div class='subtitle'>
+منصة استخبارات جيولوجية واستكشاف تعديني
 </div>
 
-<div class="enterprise-subtitle">
-المطور: {DEVELOPER}
+<div class='subtitle'>
+المطور: أحمد أبو عزيزه الرشيدي
 </div>
 
-<div class="enterprise-lock">
-🔐 SYSTEM LOCK : {SYSTEM_LOCK}
-</div>
-
-<div class="poetry-box">
+<div class='poetry'>
 لمعة ذهب بين الصخر والتضاريس<br>
 مضمونها سيرة عظيم النزاهه
 </div>
 """, unsafe_allow_html=True)
 
 # =========================================================
-# 📦 ENTERPRISE GEO DATABASE
+# DATA
 # =========================================================
-def load_enterprise_data():
+def load_data():
 
-    df = pd.DataFrame([
+    return pd.DataFrame([
         {
-            "id": "GX-001",
-            "name": "أربعات",
-            "lat": 19.82,
-            "lon": 36.95,
-            "structure": 92,
-            "alteration": 88,
-            "cluster": 80,
-            "gpi": 93
+            "id":"GX-001",
+            "name":"أربعات",
+            "lat":19.82,
+            "lon":36.95,
+            "structure":92,
+            "alteration":88,
+            "cluster":80,
+            "gpi":93
         },
         {
-            "id": "GX-002",
-            "name": "سنكات",
-            "lat": 18.84,
-            "lon": 36.75,
-            "structure": 85,
-            "alteration": 76,
-            "cluster": 70,
-            "gpi": 84
+            "id":"GX-002",
+            "name":"سنكات",
+            "lat":18.84,
+            "lon":36.75,
+            "structure":85,
+            "alteration":76,
+            "cluster":70,
+            "gpi":84
         },
         {
-            "id": "GX-003",
-            "name": "جبيت",
-            "lat": 20.15,
-            "lon": 36.50,
-            "structure": 68,
-            "alteration": 61,
-            "cluster": 58,
-            "gpi": 65
-        },
-        {
-            "id": "GX-004",
-            "name": "الممر المخفي",
-            "lat": 21.05,
-            "lon": 35.80,
-            "structure": 96,
-            "alteration": 91,
-            "cluster": 88,
-            "gpi": 97
+            "id":"GX-003",
+            "name":"جبيت",
+            "lat":20.15,
+            "lon":36.50,
+            "structure":68,
+            "alteration":61,
+            "cluster":58,
+            "gpi":65
         }
     ])
 
-    return df
-
-DATA = load_enterprise_data()
+DATA = load_data()
 
 # =========================================================
-# 🧠 ENTERPRISE GEO ENGINE
+# ENGINE
 # =========================================================
-def enterprise_engine(text):
+def gx_engine(text):
 
     t = text.lower()
 
     structure = any(x in t for x in [
-        "fault", "shear", "lineament",
-        "فالق", "قص", "كسر"
+        "fault","shear","فالق","كسر"
     ])
 
     quartz = any(x in t for x in [
-        "quartz", "vein", "عرق", "كوارتز"
+        "quartz","عرق","كوارتز"
     ])
 
     alteration = any(x in t for x in [
-        "clay", "swir", "alteration",
-        "طين", "تحوير"
-    ])
-
-    cluster = any(x in t for x in [
-        "cluster", "node", "تجمع", "عقدة"
+        "clay","swir","تحوير"
     ])
 
     score = 0
@@ -254,133 +198,89 @@ def enterprise_engine(text):
         score += 40
 
     if quartz:
-        score += 30
+        score += 35
 
     if alteration:
-        score += 20
+        score += 25
 
-    if cluster:
-        score += 10
-
-    # =====================================
-    # DEPTH MODEL
-    # =====================================
-    if score >= 85:
+    if score >= 80:
+        status = "🟢 Target-A"
         depth = "0–20m"
-        status = "🟢 TARGET-A"
-        decision = "EXPAND"
-    elif score >= 60:
+    elif score >= 50:
+        status = "🟡 Target-B"
         depth = "20–50m"
-        status = "🟡 TARGET-B"
-        decision = "TEST"
     else:
+        status = "🔴 Reject"
         depth = ">50m"
-        status = "🔴 REJECT"
-        decision = "KILL"
 
-    return {
-        "score": score,
-        "depth": depth,
-        "status": status,
-        "decision": decision
-    }
+    return score, status, depth
 
 # =========================================================
-# 📊 SIDEBAR
+# SIDEBAR
 # =========================================================
 with st.sidebar:
 
     st.title("🛰️ GX ENTERPRISE")
 
     menu = st.radio(
-        "القائمة الرئيسية",
+        "القائمة",
         [
-            "🏠 لوحة القيادة",
-            "🛰️ الخريطة الصناعية",
-            "📊 التحليل الجيولوجي",
-            "🧠 محرك GX",
-            "📖 البروتوكولات",
-            "📑 التوثيق"
+            "لوحة القيادة",
+            "الخريطة الصناعية",
+            "التحليل متعدد العوامل",
+            "محرك GX",
+            "التوثيق"
         ]
     )
 
-    st.markdown("---")
-
-    st.success("النظام يعمل بكفاءة")
-    st.write(f"الإصدار: {VERSION}")
-
 # =========================================================
-# 🏠 DASHBOARD
+# DASHBOARD
 # =========================================================
-if menu == "🏠 لوحة القيادة":
+if menu == "لوحة القيادة":
 
-    st.header("لوحة القيادة الجيولوجية")
+    st.header("لوحة القيادة")
 
-    c1, c2, c3, c4 = st.columns(4)
+    c1,c2,c3 = st.columns(3)
 
     c1.metric("عدد الأهداف", len(DATA))
     c2.metric("أعلى GPI", DATA["gpi"].max())
-    c3.metric("متوسط البنية", int(DATA["structure"].mean()))
-    c4.metric("وضع النظام", "Enterprise")
-
-    st.info("""
-يعتمد النظام على:
-- البنية الجيولوجية
-- التحوير الحراري
-- التجمعات المعدنية
-- مؤشرات الاستشعار عن بعد
-""")
+    c3.metric("وضع النظام", "Enterprise")
 
 # =========================================================
-# 🛰️ INDUSTRIAL MAP
+# MAP
 # =========================================================
-elif menu == "🛰️ الخريطة الصناعية":
+elif menu == "الخريطة الصناعية":
 
-    st.header("الخريطة الصناعية متعددة الطبقات")
+    st.header("الخريطة الصناعية")
 
     m = folium.Map(
-        location=[19.5, 36.5],
+        location=[19.5,36.5],
         zoom_start=6,
         tiles=None
     )
 
-    # Satellite
     folium.TileLayer(
-        tiles="OpenStreetMap",
-        name="الأساسية"
-    ).add_to(m)
-
-    # Dark
-    folium.TileLayer(
-        tiles="CartoDB dark_matter",
-        name="Dark"
-    ).add_to(m)
-
-    # Terrain
-    folium.TileLayer(
-        tiles="Stamen Terrain",
+        tiles="https://tile.openstreetmap.org/{z}/{x}/{y}.png",
+        attr="OpenStreetMap",
         name="Terrain"
     ).add_to(m)
 
-    # Targets
+    folium.TileLayer(
+        tiles="CartoDB dark_matter",
+        name="Dark",
+        attr="CartoDB"
+    ).add_to(m)
+
     for _, row in DATA.iterrows():
 
         color = "red" if row["gpi"] > 85 else "orange"
 
-        popup_text = f"""
-        الهدف: {row['name']}<br>
-        GPI: {row['gpi']}<br>
-        Structure: {row['structure']}<br>
-        Alteration: {row['alteration']}
-        """
-
         folium.CircleMarker(
             location=[row["lat"], row["lon"]],
-            radius=10,
-            popup=popup_text,
+            radius=8,
+            popup=f"{row['name']} | GPI {row['gpi']}",
             color=color,
-            fill=True,
-            fill_opacity=0.8
+            fill=True
         ).add_to(m)
 
     folium.LayerControl().add_to(m)
@@ -388,11 +288,11 @@ elif menu == "🛰️ الخريطة الصناعية":
     st_folium(m, height=650)
 
 # =========================================================
-# 📊 ANALYTICS
+# ANALYTICS
 # =========================================================
-elif menu == "📊 التحليل الجيولوجي":
+elif menu == "التحليل متعدد العوامل":
 
-    st.header("التحليل الصناعي متعدد العوامل")
+    st.header("التحليل الصناعي")
 
     df = DATA.copy()
 
@@ -402,98 +302,56 @@ elif menu == "📊 التحليل الجيولوجي":
         df["cluster"] * 0.3
     )
 
-    fig = px.bar(
-        df,
-        x="name",
-        y="final_score",
-        color="gpi",
-        title="Enterprise Geological Scoring"
+    st.bar_chart(
+        df.set_index("name")["final_score"]
     )
-
-    st.plotly_chart(fig, use_container_width=True)
 
     st.dataframe(df, use_container_width=True)
 
 # =========================================================
-# 🧠 GX ENGINE
+# GX ENGINE
 # =========================================================
-elif menu == "🧠 محرك GX":
+elif menu == "محرك GX":
 
-    st.header("محرك التحليل الجيولوجي الصناعي")
+    st.header("محرك التحليل الجيولوجي")
 
     q = st.text_area(
-        "أدخل وصف جيولوجي",
-        placeholder="مثال: فالق + عرق كوارتز + تحوير طيني + تجمع معدني"
+        "أدخل الوصف الجيولوجي"
     )
 
-    if st.button("تشغيل التحليل"):
+    if st.button("تحليل"):
 
-        result = enterprise_engine(q)
+        score, status, depth = gx_engine(q)
 
-        st.success(result["status"])
+        st.success(status)
 
-        c1, c2 = st.columns(2)
+        c1,c2 = st.columns(2)
 
-        c1.metric("النتيجة", result["score"])
-        c2.metric("العمق المتوقع", result["depth"])
-
-        st.info(f"قرار النظام: {result['decision']}")
+        c1.metric("Score", score)
+        c2.metric("Depth", depth)
 
 # =========================================================
-# 📖 PROTOCOLS
+# DOCS
 # =========================================================
-elif menu == "📖 البروتوكولات":
+elif menu == "التوثيق":
 
-    st.header("البروتوكولات الصناعية")
+    st.header("توثيق النظام")
 
     st.markdown("""
-### 🟥 KILL
-- غياب البنية
-- غياب التحوير
-- عدم وجود Cluster
-
-### 🟨 TEST
-- مؤشرات جزئية
-- بنية متوسطة
-- تحوير محدود
-
-### 🟩 EXPAND
-- Structure قوي
-- Quartz واضح
-- Clay alteration
-- Cluster متعدد
-""")
-
-# =========================================================
-# 📑 DOCUMENTATION
-# =========================================================
-elif menu == "📑 التوثيق":
-
-    st.header("توثيق المنصة")
-
-    st.markdown(f"""
 ### النظام
-{SYSTEM_NAME}
+BOUH GX ENTERPRISE
 
-### الإصدار
-{VERSION}
+### الوظيفة
+منصة تحليل جيولوجي واستشعار عن بعد
 
-### المطور
-{DEVELOPER}
-
-### القفل
-{SYSTEM_LOCK}
-
-### الوصف
-منصة جيولوجية صناعية متقدمة لتحليل مؤشرات الذهب
-تعتمد على:
-- التحليل البنيوي
-- مؤشرات التحوير
-- منطق التجمعات
-- نظم الاستشعار عن بعد
+### المحاور
+- Structure
+- Alteration
+- Cluster Logic
+- GPI Analysis
 
 ### الحقوق
-جميع الحقوق محفوظة للمطور
+جميع الحقوق محفوظة
 """)
 
 # =========================================================
@@ -501,10 +359,8 @@ elif menu == "📑 التوثيق":
 # =========================================================
 st.markdown("---")
 
-st.markdown(f"""
-<div class="footer-box">
-© 2026 | {SYSTEM_NAME}<br>
-المطور: {DEVELOPER}<br>
-ALL RIGHTS RESERVED
-</div>
+st.markdown("""
+<center>
+© 2026 | BOUH GX ENTERPRISE
+</center>
 """, unsafe_allow_html=True)
