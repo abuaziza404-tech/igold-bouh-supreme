@@ -5,10 +5,10 @@ from streamlit_folium import st_folium
 import plotly.express as px
 
 # =====================================================
-# 🛰️ SYSTEM CONFIG
+# 🛰️ CONFIG
 # =====================================================
 st.set_page_config(
-    page_title="BOUH GX ENGINE v2.0",
+    page_title="بوح التضاريس GX Mining",
     page_icon="🛰️",
     layout="wide"
 )
@@ -17,40 +17,86 @@ SYSTEM_LOCK = "abuaziza2000"
 DEVELOPER = "أحمد أبو عزيزه الرشيدي"
 
 # =====================================================
-# 🎨 UI THEME
+# 🎨 UI STYLE (Arabic + Institutional)
 # =====================================================
 st.markdown("""
 <style>
-.main { background-color: #0e1117; color: white; }
-.stButton>button { background:#FFD700; color:black; font-weight:bold; }
-h1,h2,h3 { color:#FFD700; }
+body {direction: rtl;}
+.main {background-color:#0b0f14; color:white;}
+
+.title-box {
+    text-align:center;
+    padding:10px;
+}
+
+.big-title {
+    font-size:40px;
+    font-weight:bold;
+    color:#FFD700;
+}
+
+.dev-name {
+    font-size:18px;
+    color:#ffffff;
+    margin-top:-10px;
+}
+
+.poetry {
+    background:black;
+    color:#FFD700;
+    text-align:center;
+    padding:10px;
+    border:1px solid #FFD700;
+    margin-top:10px;
+    font-style:italic;
+}
+
+.lock {
+    color:red;
+    font-weight:bold;
+}
 </style>
 """, unsafe_allow_html=True)
 
 # =====================================================
-# 📦 DATA CORE
+# 🛰️ HEADER (Institutional Identity)
+# =====================================================
+st.markdown(f"""
+<div class='title-box'>
+    <div class='big-title'>🛰️ بوح التضاريس GX MINING v3.0</div>
+    <div class='dev-name'>المهندس: {DEVELOPER}</div>
+    <div class='lock'>SYSTEM LOCK: {SYSTEM_LOCK}</div>
+</div>
+
+<div class='poetry'>
+لمعة ذهب بين الصخر والتضاريس<br>
+مضمونها سيرة عظيم النزاهه
+</div>
+""", unsafe_allow_html=True)
+
+# =====================================================
+# 📦 GEO DATA CORE
 # =====================================================
 def load_data():
-    targets = pd.DataFrame([
-        {"id":"T-001","name":"أربعات","lat":19.82,"lon":36.95,"gpi":92,"class":"A"},
-        {"id":"T-002","name":"سنكات","lat":18.84,"lon":36.75,"gpi":85,"class":"A"},
-        {"id":"T-003","name":"جبيت","lat":20.15,"lon":36.50,"gpi":65,"class":"B"},
-        {"id":"T-004","name":"الممر المخفي","lat":21.05,"lon":35.80,"gpi":95,"class":"A"},
+    return pd.DataFrame([
+        {"id":"T-001","name":"أربعات","lat":19.82,"lon":36.95,"gpi":92,"type":"A"},
+        {"id":"T-002","name":"سنكات","lat":18.84,"lon":36.75,"gpi":85,"type":"A"},
+        {"id":"T-003","name":"جبيت","lat":20.15,"lon":36.50,"gpi":65,"type":"B"},
+        {"id":"T-004","name":"الممر المخفي","lat":21.05,"lon":35.80,"gpi":95,"type":"A"},
     ])
-    return targets
 
-TARGETS = load_data()
+DATA = load_data()
 
 # =====================================================
-# 🧠 GX ENGINE CORE (OFFLINE AI)
+# 🧠 GX MINING ENGINE (Predictive Core)
 # =====================================================
-def gx_engine(query):
-    q = query.lower()
+def gx_mining_engine(text):
+    t = text.lower()
 
-    structure = any(x in q for x in ["fault","shear","كسر","فالق","lineament"])
-    quartz = any(x in q for x in ["quartz","كوارتز","vein","عرق"])
-    clay = any(x in q for x in ["clay","swir","alteration","طين"])
-    weak = any(x in q for x in ["ضعيف","weak","لا يوجد"])
+    structure = any(x in t for x in ["fault","shear","كسر","فالق"])
+    quartz = any(x in t for x in ["quartz","كوارتز","عرق"])
+    alteration = any(x in t for x in ["clay","swir","alteration","تحوير"])
+    cluster_hint = any(x in t for x in ["cluster","تجمع","عدة","نقاط"])
 
     score = 0
     signals = []
@@ -61,152 +107,142 @@ def gx_engine(query):
 
     if quartz:
         score += 30
-        signals.append("QUARTZ")
+        signals.append("QUARTZ VEIN")
 
-    if clay:
+    if alteration:
         score += 25
         signals.append("ALTERATION")
 
-    if weak:
-        score -= 20
-        signals.append("WEAK SIGNAL")
+    if cluster_hint:
+        score += 15
+        signals.append("CLUSTER")
 
-    # Decision Logic
-    if score >= 70:
-        decision = "🟢 TARGET-A (EXPAND)"
-    elif score >= 40:
-        decision = "🟡 TARGET-B (TEST)"
+    # Depth inference (simplified geological logic)
+    if score >= 80:
+        depth = "0–20m (High-grade near surface)"
+        decision = "🟢 TARGET-A (EXPAND MINING ZONE)"
+    elif score >= 50:
+        depth = "20–50m (Exploration drilling required)"
+        decision = "🟡 TARGET-B (TEST ZONE)"
     else:
-        decision = "🔴 REJECT (KILL)"
+        depth = ">50m or weak system"
+        decision = "🔴 REJECT / KILL ZONE"
 
-    return {
-        "score": score,
-        "signals": signals,
-        "decision": decision
-    }
+    return score, signals, depth, decision
 
 # =====================================================
-# 🧭 SIDEBAR
+# 📊 SIDEBAR
 # =====================================================
 with st.sidebar:
-    st.title("🛰️ BOUH GX ENGINE")
-    st.write(f"Developer: {DEVELOPER}")
-    st.write(f"System Lock: {SYSTEM_LOCK}")
-
-    menu = st.radio("Navigation", [
-        "🏠 Dashboard",
-        "🗺️ Map",
-        "📊 Analytics",
-        "🧠 GX Assistant",
-        "📖 Field Manual"
+    st.title("🛰️ GX MINING CONTROL")
+    st.write(f"🔐 القفل: {SYSTEM_LOCK}")
+    menu = st.radio("القائمة", [
+        "🏠 لوحة القيادة",
+        "🗺️ خريطة الأقمار الصناعية",
+        "📊 التحليل التنبؤي",
+        "🧠 محرك GX",
+        "📖 دليل التعدين"
     ])
 
 # =====================================================
 # 🏠 DASHBOARD
 # =====================================================
-if menu == "🏠 Dashboard":
-    st.title("BOUH GX ENGINE v2.0")
+if menu == "🏠 لوحة القيادة":
+    st.header("📊 لوحة التعدين الذكي")
 
-    col1,col2,col3 = st.columns(3)
-    col1.metric("Targets", len(TARGETS))
-    col2.metric("Max GPI", TARGETS["gpi"].max())
-    col3.metric("System", "OFFLINE CORE")
+    c1,c2,c3 = st.columns(3)
+    c1.metric("عدد الأهداف", len(DATA))
+    c2.metric("أعلى GPI", DATA["gpi"].max())
+    c3.metric("النظام", "GX OFFLINE CORE")
 
-    st.info("Rule-Based Geological Intelligence Active")
+    st.info("تحليل يعتمد على البنية + العروق + التحوير + التجمعات")
 
 # =====================================================
-# 🗺️ MAP ENGINE
+# 🗺️ SATELLITE MAP + TOPOGRAPHY
 # =====================================================
-elif menu == "🗺️ Map":
-    st.title("Geological Map")
+elif menu == "🗺️ خريطة الأقمار الصناعية":
+    st.header("🛰️ طبقات تضاريس + أقمار صناعية")
 
-    m = folium.Map(location=[19.5,36.5], zoom_start=6, tiles="CartoDB dark_matter")
+    m = folium.Map(location=[19.5,36.5], zoom_start=6, tiles="Stamen Terrain")
 
-    for _,r in TARGETS.iterrows():
-        color = "red" if r["class"]=="A" else "orange"
+    folium.TileLayer("OpenStreetMap").add_to(m)
+    folium.TileLayer("CartoDB dark_matter").add_to(m)
+    folium.TileLayer("Stamen Terrain").add_to(m)
+
+    for _,r in DATA.iterrows():
+        color = "red" if r["type"]=="A" else "orange"
 
         folium.Marker(
             [r["lat"],r["lon"]],
-            tooltip=r["name"],
-            popup=f"{r['id']} | GPI {r['gpi']}",
+            popup=f"{r['name']} | GPI {r['gpi']}",
+            tooltip="Target Zone",
             icon=folium.Icon(color=color)
         ).add_to(m)
 
-    st_folium(m, height=550)
+    folium.LayerControl().add_to(m)
+    st_folium(m, height=600)
 
 # =====================================================
 # 📊 ANALYTICS
 # =====================================================
-elif menu == "📊 Analytics":
-    st.title("GPI Analysis")
+elif menu == "📊 التحليل التنبؤي":
+    st.header("📊 نموذج GPI + Prediction")
 
     fig = px.bar(
-        TARGETS,
+        DATA,
         x="id",
         y="gpi",
-        color="class",
-        title="GPI Distribution"
+        color="type",
+        title="Gold Potential Index (GPI)"
     )
 
     st.plotly_chart(fig, use_container_width=True)
-
-    st.dataframe(TARGETS)
+    st.dataframe(DATA)
 
 # =====================================================
-# 🧠 GX ASSISTANT (OFFLINE)
+# 🧠 GX ENGINE
 # =====================================================
-elif menu == "🧠 GX Assistant":
-    st.title("GX ENGINE Assistant")
+elif menu == "🧠 محرك GX":
+    st.header("🧠 التحليل الجيولوجي الذكي (Offline)")
 
-    if "chat" not in st.session_state:
-        st.session_state.chat = []
-
-    for c in st.session_state.chat:
-        with st.chat_message(c["role"]):
-            st.markdown(c["content"])
-
-    q = st.chat_input("Ask geological query...")
+    q = st.text_input("أدخل وصف جيولوجي (فالق / عرق كوارتز / تحوير / تجمع)")
 
     if q:
-        result = gx_engine(q)
+        score, signals, depth, decision = gx_mining_engine(q)
 
-        response = f"""
-📊 SCORE: {result['score']}
-🔎 SIGNALS: {', '.join(result['signals'])}
-📍 DECISION: {result['decision']}
-"""
-
-        st.session_state.chat.append({"role":"user","content":q})
-        st.session_state.chat.append({"role":"assistant","content":response})
-
-        with st.chat_message("assistant"):
-            st.markdown(response)
+        st.subheader("📊 النتائج")
+        st.write("Score:", score)
+        st.write("Signals:", signals)
+        st.write("Depth:", depth)
+        st.success(decision)
 
 # =====================================================
 # 📖 FIELD MANUAL
 # =====================================================
-elif menu == "📖 Field Manual":
-    st.title("Field Decision System")
+elif menu == "📖 دليل التعدين":
+    st.header("📖 بروتوكولات التعدين")
 
-    tab1,tab2,tab3 = st.tabs(["KILL","TEST","EXPAND"])
+    st.markdown("""
+### 🔴 KILL ZONE
+- غياب البنية الجيولوجية
+- عدم وجود عروق
 
-    with tab1:
-        st.error("No structure or weak signals → STOP")
+### 🟡 TEST ZONE
+- مؤشرات جزئية
+- يحتاج عينات
 
-    with tab2:
-        st.warning("Partial indicators → Field sampling required")
-
-    with tab3:
-        st.success("Strong structure + quartz + alteration → Drill expansion")
+### 🟢 EXPAND ZONE
+- بنية قوية + كوارتز + تحوير
+- حفر مباشر
+""")
 
 # =====================================================
 # FOOTER
 # =====================================================
 st.markdown("---")
-st.markdown(f"""
+st.markdown("""
 <center>
-🛰️ BOUH GX ENGINE v2.0 <br>
-Developer: {DEVELOPER} <br>
-SYSTEM LOCK: {SYSTEM_LOCK}
+© بوح التضاريس GX MINING v3.0<br>
+حقوق النظام محفوظة | المهندس أحمد أبو عزيزه الرشيدي
 </center>
 """, unsafe_allow_html=True)
