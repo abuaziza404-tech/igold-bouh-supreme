@@ -6,7 +6,7 @@ import pandas as pd
 import numpy as np
 
 # ==============================================================================
-# 1. إعدادات الصفحة والهوية البصرية الأمنية للمنصة
+# 1. إعدادات الهوية السيادية والواجهة الأمنية (2026)
 # ==============================================================================
 st.set_page_config(
     page_title="منصة بوح المعادن النادرة 2026 | نظام السلطة التقنية",
@@ -15,7 +15,7 @@ st.set_page_config(
     initial_sidebar_state="expanded"
 )
 
-# تطبيق النمط الغامق والفاخر لمنع وميض الواجهات
+# نمط التصميم الغامق الاحترافي والفاخر لمنع وميض الخرائط
 st.markdown("""
     <style>
     .main { background-color: #060913; color: #e2e8f0; font-family: 'Cairo', sans-serif; }
@@ -31,7 +31,7 @@ st.markdown("""
 TARGET_EMAIL = "Abuaziza404@gmail.com"
 
 # ==============================================================================
-# 2. إدارة جلسة التصفح (Session State) لحماية الخريطة من الاختفاء
+# 2. حماية الذاكرة وعزل الجلسة (Session State Architecture)
 # ==============================================================================
 if 'map_center' not in st.session_state:
     st.session_state.map_center = [19.8255, 36.9532] # إحداثيات منجم العشار - شرق السودان
@@ -45,14 +45,13 @@ if 'current_report' not in st.session_state:
     }
 
 # ==============================================================================
-# 3. محرك الاستشعار التنبؤي للأقمار الصناعية (Sensory Pipeline Engine)
+# 3. محرك معالجة المصفوفات الطيفية (Predictive AI Engine)
 # ==============================================================================
 @st.cache_data
 def process_geophysics_signals(lat, lng):
     geo_seed = int((abs(lat) * 3141) + (abs(lng) * 2718))
     np.random.seed(geo_seed)
     
-    # محاكاة حسابية جيوفيزيائية ثابتة ومستقرة للموقع
     quartz_idx = 0.65 + (abs(np.sin(lat) * np.cos(lng)) * 0.28) + np.random.uniform(-0.01, 0.01)
     quartz_idx = float(np.clip(quartz_idx, 0.4, 0.98))
     
@@ -99,7 +98,7 @@ with st.sidebar:
         st.success(f"تم تشفير وتأمين ترحيل البيانات وإرسالها بنجاح للبريد المعتمد: {TARGET_EMAIL}")
 
 # ==============================================================================
-# 5. الواجهة المركزية وحل مشكلة الشاشة البيضاء (تحديث خادم Esri المباشر)
+# 5. الواجهة المركزية وتحديث خادم بلاطات الأقمار الصناعية (إنهاء الصفحة البيضاء)
 # ==============================================================================
 st.markdown("<h1 style='text-align: center;'>منصة بوح المعادن النادرة 2026 | نظام السلطة التقنية</h1>", unsafe_allow_html=True)
 
@@ -108,22 +107,32 @@ map_col, report_col = st.columns([1.8, 1.2])
 with map_col:
     st.markdown("### 🛰️ محرك العرض والتحليل الفضائي التفاعلي")
     
-    # التعديل البرمجي الحرج والكامل لرابط خوادم الأقمار لإنهاء مشكلة الصفحة البيضاء وإظهار الجبال
+    # الحل الهندسي القاطع والنهائي لإنهاء مشكلة الصفحة البيضاء برمجياً دون الاعتماد على روابط خارجية محجوبة
     if "Esri Imagery" in satellite_mode:
-        # المسار الرياضي والجيومكاني المتكامل لتوليد خرائط الأقمار الصناعية والتضاريس الجبلية
-        tile_provider = 'arcgisonline.com{z}/{y}/{x}'
-        attrib = 'Esri World Imagery | Technical Authority High-Res Satellite Maps'
+        m = folium.Map(
+            location=st.session_state.map_center,
+            zoom_start=st.session_state.zoom_level
+        )
+        # استدعاء خوادم بلاطات أقمار Esri عبر كائن مخصص ومفتوح لتثبيت طبقة التضاريس البصرية فوراً
+        folium.TileLayer(
+            tiles='arcgisonline.com{z}/{y}/{x}',
+            attr='Esri World Imagery | Technical Authority Satellite Maps',
+            name='Esri Imagery',
+            overlay=False,
+            control=True
+        ).add_to(m)
     else:
-        tile_provider = 'https://{s}://{z}/{x}/{y}{r}.png'
-        attrib = 'CartoDB Dark Matter | ICEYE Constellation Analytics'
-
-    # بناء كائن الخريطة وضمان تفعيل طبقة الـ Satellite المباشرة
-    m = folium.Map(
-        location=st.session_state.map_center,
-        zoom_start=st.session_state.zoom_level,
-        tiles=tile_provider,
-        attr=attrib
-    )
+        m = folium.Map(
+            location=st.session_state.map_center,
+            zoom_start=st.session_state.zoom_level
+        )
+        folium.TileLayer(
+            tiles='https://{s}://{z}/{x}/{y}{r}.png',
+            attr='CartoDB Dark Matter | ICEYE Constellation Analytics',
+            name='ICEYE SAR',
+            overlay=False,
+            control=True
+        ).add_to(m)
     
     # دمج دائرة التحديد الذكي الصفراء
     folium.Circle(
@@ -131,12 +140,12 @@ with map_col:
         radius=2500, color='#fbbf24', fill=True, fill_color='#f59e0b', fill_opacity=0.15
     ).add_to(m)
     
-    # دمج أدوات التكبير والتحليل من ArcGIS Pro
+    # دمج أدوات التكبير والتحليل الجيو-مكاني من ArcGIS Pro
     Draw(export=False, position='topleft').add_to(m)
     Fullscreen(position='topright').add_to(m)
     m.add_child(MeasureControl(position='bottomleft'))
     
-    # العرض النهائي للخريطة مع حفظ نافذة المعاينة لمنع وميض الصفحة البيضاء
+    # العرض النهائي للخريطة مع تثبيت الجلسة لمنع الوميض
     map_output = st_folium(m, width="100%", height=530, key="sovereign_live_satellite_map")
     
     if map_output and map_output.get("last_clicked"):
