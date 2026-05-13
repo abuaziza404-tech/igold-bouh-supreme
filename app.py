@@ -6,7 +6,7 @@ import pandas as pd
 import numpy as np
 
 # ==============================================================================
-# 1. إعدادات الهوية السيادية والواجهة الأمنية (2026)
+# 1. إعدادات الهوية السيادية والواجهة الأمنية للمنصة
 # ==============================================================================
 st.set_page_config(
     page_title="منصة بوح المعادن النادرة 2026 | نظام السلطة التقنية",
@@ -15,7 +15,7 @@ st.set_page_config(
     initial_sidebar_state="expanded"
 )
 
-# نمط التصميم الغامق الاحترافي والفاخر لمنع وميض الخرائط
+# نمط التصميم الغامق لتأمين واجهات المنصة
 st.markdown("""
     <style>
     .main { background-color: #060913; color: #e2e8f0; font-family: 'Cairo', sans-serif; }
@@ -98,7 +98,7 @@ with st.sidebar:
         st.success(f"تم تشفير وتأمين ترحيل البيانات وإرسالها بنجاح للبريد المعتمد: {TARGET_EMAIL}")
 
 # ==============================================================================
-# 5. الواجهة المركزية وتحديث خادم بلاطات الأقمار الصناعية (إنهاء الصفحة البيضاء)
+# 5. الواجهة المركزية وتحديث خادم بلاطات الأقمار الصناعية البصرية (إنهاء الصفحة البيضاء)
 # ==============================================================================
 st.markdown("<h1 style='text-align: center;'>منصة بوح المعادن النادرة 2026 | نظام السلطة التقنية</h1>", unsafe_allow_html=True)
 
@@ -107,31 +107,33 @@ map_col, report_col = st.columns([1.8, 1.2])
 with map_col:
     st.markdown("### 🛰️ محرك العرض والتحليل الفضائي التفاعلي")
     
-    # الحل الهندسي القاطع والنهائي لإنهاء مشكلة الصفحة البيضاء برمجياً دون الاعتماد على روابط خارجية محجوبة
+    # تصحيح برمي شامل للرابط المستدعى لفك تشفير صور التضاريس الحقيقية
     if "Esri Imagery" in satellite_mode:
         m = folium.Map(
             location=st.session_state.map_center,
-            zoom_start=st.session_state.zoom_level
+            zoom_start=st.session_state.zoom_level,
+            tiles=None # نضع القيمة صفر لإلغاء الخريطة البيضاء الافتراضية
         )
-        # استدعاء خوادم بلاطات أقمار Esri عبر كائن مخصص ومفتوح لتثبيت طبقة التضاريس البصرية فوراً
+        # استدعاء رابط البث الفعلي المباشر لصور الأقمار لـ Esri بدلاً من خرائط النواقل الممسوحة
         folium.TileLayer(
             tiles='arcgisonline.com{z}/{y}/{x}',
             attr='Esri World Imagery | Technical Authority Satellite Maps',
-            name='Esri Imagery',
+            name='Esri World Imagery Satellite',
             overlay=False,
-            control=True
+            control=False
         ).add_to(m)
     else:
         m = folium.Map(
             location=st.session_state.map_center,
-            zoom_start=st.session_state.zoom_level
+            zoom_start=st.session_state.zoom_level,
+            tiles=None
         )
         folium.TileLayer(
             tiles='https://{s}://{z}/{x}/{y}{r}.png',
             attr='CartoDB Dark Matter | ICEYE Constellation Analytics',
             name='ICEYE SAR',
             overlay=False,
-            control=True
+            control=False
         ).add_to(m)
     
     # دمج دائرة التحديد الذكي الصفراء
