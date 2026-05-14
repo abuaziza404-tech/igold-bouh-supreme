@@ -1,107 +1,208 @@
 import streamlit as st
-import pandas as pd
 import numpy as np
+import pandas as pd
+import plotly.express as px
+import folium
+from streamlit_folium import st_folium
+from sklearn.cluster import DBSCAN
 import xgboost as xgb
-import json
+import joblib
 import os
+import random
 
-# --- PAGE CONFIGURATION ---
+# ==========================================================
+# BOUH SUPREME V11 - INDUSTRIAL GEOAI PLATFORM
+# Engineer Ahmed AbuAziza Al-Rashidi
+# ==========================================================
+
 st.set_page_config(
-    page_title="BOUH SUPREME V10 - GeoAI Mining Platform",
-    page_icon="💎",
-    layout="wide"
+    page_title="BOUH SUPREME V11",
+    layout="wide",
+    initial_sidebar_state="expanded"
 )
 
-# --- STYLING ---
+# ==========================================================
+# HEADER
+# ==========================================================
+
 st.markdown("""
-    <style>
-    .main { background-color: #0e1117; color: white; }
-    .stButton>button { width: 100%; border-radius: 5px; height: 3em; background-color: #ff4b4b; color: white; }
-    .metric-container { background-color: #1e2130; padding: 15px; border-radius: 10px; border-left: 5px solid #ff4b4b; }
-    </style>
-    """, unsafe_allow_html=True)
+# 💎 BOUH SUPREME V11 — Industrial GeoAI
 
-# --- CORE LOGIC: MINERAL POTENTIAL SCORE (MPS) ---
-def calculate_mps(iron, clay, silica, sar, topo):
-    # Professional Geological Weighting (BOUH V10 Standard)
-    # Weights: Iron (20%), Clay (25%), Silica (10%), SAR/Structure (25%), Topo (20%)
-    score = (0.20 * iron) + (0.25 * clay) + (0.10 * silica) + (0.25 * sar) + (0.20 * topo)
-    
-    if score > 0.75:
-        tier = "T3 - HIGH PRIORITY TARGET"
-        color = "red"
-    elif score > 0.50:
-        tier = "T2 - MEDIUM PROSPECT"
-        color = "orange"
-    else:
-        tier = "T1 - RECONNAISSANCE ZONE"
-        color = "blue"
-        
-    return round(score, 4), tier, color
+### منصة الاستكشاف المعدني الذكية
+### Nubian Shield / Red Sea Hills
 
-# --- APP LAYOUT ---
-st.title("💎 BOUH SUPREME V10 - Industrial GeoAI")
-st.markdown("### منصة الاستكشاف المعدني الذكية - تطوير المهندس أحمد أبوعزيزة الرشيدي")
-
-col1, col2 = st.columns([1, 2])
-
-with col1:
-    st.header("🎮 Control Center")
-    with st.expander("📡 Satellite Inputs (Proxies)", expanded=True):
-        iron = st.slider("Iron Oxide Proxy (B4/B2)", 0.0, 1.0, 0.45)
-        clay = st.slider("Clay/Alteration Proxy (B11/B12)", 0.0, 1.0, 0.30)
-        silica = st.slider("Silica Proxy (B8/B11)", 0.0, 1.0, 0.20)
-    
-    with st.expander("🏗️ Structural & Topo Inputs", expanded=True):
-        sar = st.slider("SAR Structural Density (VV/VH)", 0.0, 1.0, 0.50)
-        topo = st.slider("Topographic Gradient (Slope)", 0.0, 1.0, 0.35)
-    
-    btn_predict = st.button("🚀 Run Probabilistic Analysis")
-
-with col2:
-    st.header("📊 GeoAI Analysis Result")
-    
-    if btn_predict:
-        score, tier, color = calculate_mps(iron, clay, silica, sar, topo)
-        
-        # Display Results
-        st.markdown(f"""
-            <div class='metric-container'>
-                <h2 style='color:{color};'>{tier}</h2>
-                <h1 style='font-size: 3em;'>MPS: {score}</h1>
-            </div>
-            """, unsafe_allow_html=True)
-        
-        # Data Simulation for Visualization
-        st.write("#### 🗺️ Target Probability Map (Simulation)")
-        map_data = pd.DataFrame(
-            np.random.randn(20, 2) / [50, 50] + [18.5, 36.8],
-            columns=['lat', 'lon']
-        )
-        st.map(map_data)
-        
-        st.success("✅ Analysis completed based on BOUH V10 Industrial Logic.")
-    else:
-        st.info("قم بتعديل المؤشرات الجيولوجية ثم اضغط على Run Analysis للبدء.")
-
-# --- FIELD FEEDBACK SECTION ---
-st.divider()
-st.header("📝 Field Feedback Loop (GPZ 7000 Integration)")
-f_col1, f_col2 = st.columns(2)
-with f_col1:
-    lat = st.number_input("Latitude", format="%.6f")
-    lon = st.number_input("Longitude", format="%.6f")
-with f_col2:
-    hit_type = st.selectbox("Field Observation", ["Positive Hit (Gold)", "Minor Trace", "Barren/Dry"])
-    
-if st.button("📥 Save Field Data"):
-    st.toast(f"Data saved at {lat}, {lon} for retraining pipeline.")
-
-st.sidebar.image("https://img.icons8.com/fluency/96/geology.png", width=100)
-st.sidebar.markdown("""
-**BOUH SUPREME V10**
-- Spectral Ingestion
-- SAR Structural Logic
-- ML Inference Ready
-- Field-to-Cloud Loop
+---
 """)
+
+# ==========================================================
+# SIDEBAR
+# ==========================================================
+
+st.sidebar.title("⚙️ GeoAI Control Center")
+
+mode = st.sidebar.selectbox(
+    "System Mode",
+    [
+        "Regional Analysis",
+        "Target Scoring",
+        "Cluster Detection",
+        "Klemm Structural Engine",
+        "Field Prediction",
+        "AI Drill Ranking"
+    ]
+)
+
+st.sidebar.markdown("---")
+
+# ==========================================================
+# AOI
+# ==========================================================
+
+AOI = {
+    "Arbaat": [20.75, 36.85],
+    "Gebeit": [21.10, 36.35],
+    "Hamisana": [21.50, 36.10],
+    "Sinkat": [19.95, 36.85]
+}
+
+selected_area = st.sidebar.selectbox(
+    "AOI",
+    list(AOI.keys())
+)
+
+lat_center, lon_center = AOI[selected_area]
+
+# ==========================================================
+# SATELLITE INPUTS
+# ==========================================================
+
+st.sidebar.markdown("## 🛰 Satellite Inputs")
+
+iron = st.sidebar.slider(
+    "Iron Oxide Proxy (B4/B2)",
+    0.0, 1.0, 0.45
+)
+
+clay = st.sidebar.slider(
+    "Clay Alteration Proxy (B11/B12)",
+    0.0, 1.0, 0.30
+)
+
+silica = st.sidebar.slider(
+    "Silica Proxy (B8/B11)",
+    0.0, 1.0, 0.50
+)
+
+sar_vv = st.sidebar.slider(
+    "SAR VV",
+    0.0, 1.0, 0.60
+)
+
+sar_vh = st.sidebar.slider(
+    "SAR VH",
+    0.0, 1.0, 0.35
+)
+
+lineament_density = st.sidebar.slider(
+    "Structural Density",
+    0.0, 1.0, 0.72
+)
+
+# ==========================================================
+# KLEMM ENGINE
+# ==========================================================
+
+def klemm_weighting(
+    iron,
+    clay,
+    silica,
+    vv,
+    vh,
+    structural
+):
+
+    sar_ratio = vv / (vh + 1e-6)
+
+    structure_bonus = structural * 0.25
+
+    # Klemm-oriented weighting
+    score = (
+        iron * 0.22 +
+        clay * 0.30 +
+        silica * 0.15 +
+        sar_ratio * 0.18 +
+        structure_bonus
+    )
+
+    return min(score, 1.0)
+
+# ==========================================================
+# MPS
+# ==========================================================
+
+mps = klemm_weighting(
+    iron,
+    clay,
+    silica,
+    sar_vv,
+    sar_vh,
+    lineament_density
+)
+
+# ==========================================================
+# TARGET CLASSIFICATION
+# ==========================================================
+
+def classify_target(score):
+
+    if score >= 0.85:
+        return "T3 — High Priority Drill Target"
+
+    elif score >= 0.65:
+        return "T2 — Surface Exploration Target"
+
+    elif score >= 0.45:
+        return "T1 — Geological Interest"
+
+    return "Reject / Hold"
+
+target_class = classify_target(mps)
+
+# ==========================================================
+# MAIN DASHBOARD
+# ==========================================================
+
+col1, col2, col3 = st.columns(3)
+
+col1.metric("MPS Score", round(mps, 3))
+col2.metric("AOI", selected_area)
+col3.metric("Classification", target_class)
+
+st.markdown("---")
+
+# ==========================================================
+# MAP
+# ==========================================================
+
+st.subheader("🗺 Geological Intelligence Map")
+
+m = folium.Map(
+    location=[lat_center, lon_center],
+    zoom_start=9,
+    tiles="CartoDB dark_matter"
+)
+
+# Main target
+folium.CircleMarker(
+    location=[lat_center, lon_center],
+    radius=12,
+    color="red",
+    fill=True,
+    fill_opacity=0.8,
+    popup=f"MPS={round(mps,3)}"
+).add_to(m)
+
+# Simulated surrounding anomalies
+for i in range(20):
+
+    lat = lat_center + np.random.uniform(-0.15, 0
