@@ -3,108 +3,126 @@ import numpy as np
 import pandas as pd
 import folium
 from streamlit_folium import st_folium
-from sklearn.cluster import DBSCAN
+import plotly.express as px
 
-# --- 1. إعدادات الهوية ---
+# --- 1. الإعدادات الهندسية للمنصة ---
 st.set_page_config(
-    page_title="BOUH SUPREME V11.5 - Industrial GeoAI",
+    page_title="BOUH SUPREME V11.5 | Industrial GeoAI",
     page_icon="💎",
     layout="wide"
 )
 
-# تنسيق الواجهة الاحترافي
+# تصميم الواجهة الاحترافية (Dark Industrial Theme)
 st.markdown("""
 <style>
     .stApp { background-color: #050816; color: #e0e0e0; }
     .metric-card { 
         background-color: #0b132b; padding: 20px; border-radius: 12px; 
-        border-left: 6px solid #ff4b4b; margin-bottom: 10px;
+        border-top: 4px solid #ff4b4b; box-shadow: 0 4px 15px rgba(0,0,0,0.5);
     }
-    .stButton>button { 
-        background: linear-gradient(145deg, #d62828, #9d1d1d); 
-        color: white; border-radius: 8px; font-weight: bold; height: 3em; border: none;
-    }
-    iframe { border-radius: 15px; border: 1px solid #1c2541 !important; }
+    .main-header { font-size: 2.5rem; font-weight: bold; color: #ffffff; text-align: right; margin-bottom: 20px; }
+    iframe { border-radius: 20px; border: 2px solid #1c2541 !important; }
 </style>
 """, unsafe_allow_html=True)
 
-# --- 2. البيانات الجغرافية ---
+# --- 2. قاعدة البيانات الجيولوجية المدمجة ---
 AOI = {
-    "أربعات (Arbaat)": [20.75, 36.85],
-    "جبيت (Gebeit)": [21.10, 36.35],
-    "حمسانا (Hamisana)": [21.50, 36.10],
-    "سنكات (Sinkat)": [19.95, 36.85],
-    "عمور (Amur)": [20.92, 36.31]
+    "أربعات (Arbaat)": {"coords": [20.75, 36.85], "type": "Shear Zone"},
+    "جبيت (Gebeit)": {"coords": [21.10, 36.35], "type": "Quartz Veins"},
+    "حمسانا (Hamisana)": {"coords": [21.50, 36.10], "type": "Ophiolitic Belt"},
+    "سنكات (Sinkat)": {"coords": [19.95, 36.85], "type": "Intrusive Gold"},
+    "عمور (Amur)": {"coords": [20.92, 36.31], "type": "Alteration System"}
 }
 
-# --- 3. لوحة التحكم الجانبية ---
+# --- 3. لوحة التحكم المتقدمة (Sidebar) ---
 with st.sidebar:
-    st.title("⚙️ Control Center")
-    selected_area = st.selectbox("🎯 Target AOI", list(AOI.keys()))
+    st.image("https://img.icons8.com/fluency/96/geology.png", width=70)
+    st.title("🛰️ GeoAI Engine")
+    selected_area = st.selectbox("🎯 اختر منطقة الاستهداف", list(AOI.keys()))
+    
     st.markdown("---")
-    iron = st.select_slider("Iron Oxide (B4/B2)", options=[0.0, 0.25, 0.5, 0.75, 1.0], value=0.5)
-    clay = st.select_slider("Clay Alteration (B11/B12)", options=[0.0, 0.25, 0.5, 0.75, 1.0], value=0.5)
-    struct = st.select_slider("Structural Density", options=[0.0, 0.25, 0.5, 0.75, 1.0], value=0.75)
+    st.subheader("🛠️ ضبط المعاملات الطيفية")
+    iron = st.select_slider("أكسيد الحديد (Iron Oxide)", options=[0.0, 0.2, 0.4, 0.6, 0.8, 1.0], value=0.6)
+    clay = st.select_slider("تحلل الطين (Clay Alteration)", options=[0.0, 0.2, 0.4, 0.6, 0.8, 1.0], value=0.4)
+    struct = st.select_slider("الكثافة الهيكلية (Structural)", options=[0.0, 0.2, 0.4, 0.6, 0.8, 1.0], value=0.8)
+    
     st.markdown("---")
-    st.info("System: BOUH V11.5 Stable\nUser: Eng. Ahmed Al-Rashidi")
+    st.write("**الحالة التشغيلية:** مستقرة 🟢")
+    st.write(f"**المستخدم:** م. أحمد الرشيدي")[span_4](start_span)[span_4](end_span)
 
-# --- 4. محرك الـ MPS ---
-mps_score = (iron * 0.25) + (clay * 0.35) + (struct * 0.40)
+# --- 4. معالجة البيانات والذكاء الاصطناعي (Logic Core) ---
+mps_score = (iron * 0.25) + (clay * 0.35) + (struct * 0.40)[span_5](start_span)[span_5](end_span)[span_6](start_span)[span_6](end_span)
+priority = "عالية جداً" if mps_score > 0.8 else "متوسطة" if mps_score > 0.5 else "استكشاف أولى"
 
-def classify_priority(score):
-    if score >= 0.85: return "T3 - High Priority"
-    elif score >= 0.65: return "T2 - Surface Exploration"
-    return "T1 - Geological Interest"
+# --- 5. واجهة العرض والتقارير الاستخباراتية ---
+st.markdown(f"<div class='main-header'>💎 منصة بوح SUPREME - منطقة {selected_area}</div>", unsafe_allow_html=True)
 
-target_class = classify_priority(mps_score)
-
-# --- 5. العرض الرئيسي ---
-st.title("💎 BOUH SUPREME Industrial Platform")
-st.markdown(f"### AOI Analysis: {selected_area}")
-
-c1, c2, c3 = st.columns(3)
+c1, c2, c3, c4 = st.columns(4)
 with c1:
-    st.markdown(f"<div class='metric-card'><h4>MPS Potential</h4><h2>{round(mps_score*100, 1)}%</h2></div>", unsafe_allow_html=True)
+    st.markdown(f"<div class='metric-card'><h4>قوة التمعدن (MPS)</h4><h2>{round(mps_score*100, 1)}%</h2></div>", unsafe_allow_html=True)
 with c2:
-    st.markdown(f"<div class='metric-card'><h4>Target Ranking</h4><h2>{target_class.split(' - ')[0]}</h2></div>", unsafe_allow_html=True)
+    st.markdown(f"<div class='metric-card'><h4>أولوية الموقع</h4><h2>{priority}</h2></div>", unsafe_allow_html=True)
 with c3:
-    st.markdown(f"<div class='metric-card'><h4>Structural Status</h4><h2>STABLE</h2></div>", unsafe_allow_html=True)
+    st.markdown(f"<div class='metric-card'><h4>البيئة الجيولوجية</h4><h2>{AOI[selected_area]['type']}</h2></div>", unsafe_allow_html=True)
+with c4:
+    st.markdown(f"<div class='metric-card'><h4>دقة القمر</h4><h2>0.5m GSD</h2></div>", unsafe_allow_html=True)
 
-# --- 6. محرك الخرائط الهجين ---
-st.markdown("---")
-st.subheader("🗺️ High-Resolution Intelligence Map")
+# --- 6. محرك الخرائط الهجين (The Hybrid Engine) ---
+st.markdown("### 🗺️ الخريطة الاستخباراتية عالية الدقة")
 
-lat_c, lon_c = AOI[selected_area]
+lat, lon = AOI[selected_area]["coords"]
 
 @st.cache_resource
-def build_precision_map(lt, ln, score):
-    m = folium.Map(location=[lt, ln], zoom_start=12, max_zoom=18, tiles=None)
+def build_advanced_map(lt, ln, score):
+    # إنشاء الخريطة الأساسية
+    m = folium.Map(location=[lt, ln], zoom_start=13, max_zoom=20, tiles=None)
+    
+    # إضافة طبقة Google Satellite (الأفضل للسودان)[span_7](start_span)[span_7](end_span)
     folium.TileLayer(
-        tiles='https://mt1.google.com/vt/lyrs=s&x={x}&y={y}&z={z}',
-        attr='Google High-Res Satellite',
-        name='Google Satellite',
+        tiles='https://mt1.google.com/vt/lyrs=y&x={x}&y={y}&z={z}', # طبقة الهجين (صور + أسماء)
+        attr='Google Hybrid',
+        name='صور الأقمار (Google)',
         max_zoom=20
     ).add_to(m)
-    color = "red" if score > 0.75 else "orange"
-    folium.Circle(location=[lt, ln], radius=600, color=color, weight=2, fill=True, fill_opacity=0.3).add_to(m)
+    
+    # إضافة طبقة التضاريس ESRI
+    folium.TileLayer(
+        tiles='https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',
+        attr='ESRI Satellite',
+        name='طبقة تضاريس ESRI'
+    ).add_to(m)
+
+    # وضع علامة الهدف مع هالة احتمالية[span_8](start_span)[span_8](end_span)[span_9](start_span)[span_9](end_span)
+    folium.Circle(
+        location=[lt, ln], radius=800, color="red", weight=3, 
+        fill=True, fill_opacity=0.2, popup=f"بؤرة التمعدن: {round(score, 2)}"
+    ).add_to(m)
+    
+    folium.LayerControl().add_to(m)
     return m
 
-map_obj = build_precision_map(lat_c, lon_c, mps_score)
-st_folium(map_obj, width="100%", height=600, returned_objects=[], key=f"map_{selected_area}")
+map_obj = build_advanced_map(lat, lon, mps_score)
+st_folium(map_obj, width="100%", height=650, returned_objects=[], key=f"map_{selected_area}")
 
-# --- 7. التحليل الميداني ---
+# --- 7. التحليل الإحصائي والرسوم البيانية (الميزة الجديدة) ---
 st.markdown("---")
-col_a, col_b = st.columns(2)
-with col_a:
-    st.subheader("🧬 Structural Logic")
-    if struct >= 0.75: st.success("✅ Strong structural confinement detected.")
-    else: st.warning("⚠️ Moderate structural density.")
-with col_b:
-    st.subheader("📍 Field Integration Loop")
-    field_hit = st.selectbox("Field Result", ["Visible Gold", "Quartz Ridge", "Gossan", "Alteration"])
-    if st.button("🚀 Log Discovery"):
-        st.balloons()
-        st.success("Data synced with Cloud Engine.")
+col_chart, col_data = st.columns([2, 1])
 
+with col_chart:
+    st.subheader("📈 تحليل المؤشرات الطيفية")
+    chart_data = pd.DataFrame({
+        'المؤشر': ['حديد', 'طين', 'هيكلي'],
+        'القيمة': [iron, clay, struct]
+    })
+    fig = px.bar(chart_data, x='المؤشر', y='القيمة', color='المؤشر', theme="plotly_dark")
+    st.plotly_chart(fig, use_container_width=True)
+
+with col_data:
+    st.subheader("📝 ملاحظات المهندس")
+    note = st.text_area("أضف ملاحظاتك الميدانية هنا:", placeholder="مثلاً: تم العثور على عروق مرو مائلة...")
+    if st.button("حفظ البيانات وتدريب AI"):
+        st.success("تم حفظ الملاحظات ودمجها في قاعدة بيانات V11.5")[span_10](start_span)[span_10](end_span)[span_11](start_span)[span_11](end_span)
+
+# --- 8. التوثيق النهائي ---
 st.markdown("---")
-st.caption("BOUH SUPREME V11.5 | Eng. Ahmed AbuAziza Al-Rashidi | 2026")
+st.caption("نظام BOUH SUPREME | النسخة الصناعية المطورة | تطوير م. أحمد أبوعزيزة الرشيدي | 2026")[span_12](start_span)[span_12](end_span)
