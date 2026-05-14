@@ -1,34 +1,36 @@
-import base64
+# app.py
+# BOUH SUPREME | Geo-Operational Intelligence Platform
+# Structure -> Pattern -> Alteration -> Confirmation -> Decision
+
 import io
 import json
 import math
 import os
+from dataclasses import dataclass
 from datetime import datetime
-from typing import Any, Dict, Optional, Tuple
+from typing import Any, Dict, List, Optional, Tuple
 
 import numpy as np
 import pandas as pd
 import streamlit as st
 
+# Optional dependencies
 try:
     import cv2
 except Exception:
     cv2 = None
 
 try:
-    import geopandas as gpd
-except Exception:
-    gpd = None
-
-try:
-    import rasterio
-except Exception:
-    rasterio = None
-
-try:
     from PIL import Image
 except Exception:
     Image = None
+
+try:
+    import rasterio
+    from rasterio.transform import xy as rio_xy
+except Exception:
+    rasterio = None
+    rio_xy = None
 
 try:
     from sklearn.cluster import DBSCAN
@@ -40,10 +42,24 @@ try:
 except Exception:
     pdk = None
 
+try:
+    import geopandas as gpd
+except Exception:
+    gpd = None
+
+try:
+    from shapely.geometry import Point, shape
+except Exception:
+    Point = None
+    shape = None
+
+try:
+    import xml.etree.ElementTree as ET
+except Exception:
+    ET = None
 
 APP_TITLE = "BOUH SUPREME | Geo-Operational Intelligence"
 APP_ICON = "🛰️"
-
 
 st.set_page_config(
     page_title=APP_TITLE,
@@ -52,121 +68,132 @@ st.set_page_config(
     initial_sidebar_state="expanded",
 )
 
-
-# =========================
+# -----------------------------
 # Session State
-# =========================
-def init_state() -> None:
+# -----------------------------
+def init_state():
     defaults = {
-        "analysis_result": None,
+        "analysis": None,
         "targets": pd.DataFrame(),
-        "raster_meta": None,
         "source_name": None,
+        "source_kind": None,
+        "meta": {},
         "aoi": None,
-        "status_message": "Ready",
+        "last_run": None,
     }
-    for key, value in defaults.items():
-        if key not in st.session_state:
-            st.session_state[key] = value
+    for k, v in defaults.items():
+        if k not in st.session_state:
+            st.session_state[k] = v
 
 
 init_state()
 
-
-# =========================
-# Basic Helpers
-# =========================
-def safe_float(x: Any, default: float = 0.0) -> float:
+# -----------------------------
+# Helpers
+# -----------------------------
+def as_float(v, default=0.0):
     try:
-        if x is None:
-            return default
-        return float(x)
+        return float(v)
     except Exception:
         return default
 
 
-def normalize01(arr: np.ndarray) -> np.ndarray:
-    arr = np.asarray(arr, dtype=np.float32)
-    finite = np.isfinite(arr)
-    if not finite.any():
-        return np.zeros_like(arr, dtype=np.float32)
-    mn = np.nanmin(arr[finite])
-    mx = np.nanmax(arr[finite])
-    if mx - mn < 1e-9:
-        return np.zeros_like(arr, dtype=np.float32)
-    out = (arr - mn) / (mx - mn)
-    out[~finite] = 0.0
+def clamp01(a):
+    return np.clip(np.asarray(a, dtype=np.float32), 0.0, 1.0)
+
+
+def normalize01(a):
+    a = np.asarray(a, dtype=np.float32)
+    mask = np.isfinite(a)
+    if not mask.any():
+        return np.zeros_like(a, dtype=np.float32)
+    mn = np.nanmin(a[mask])
+    mx = np.nanmax(a[mask])
+    if abs(mx - mn) < 1e-9:
+        return np.zeros_like(a, dtype=np.float32)
+    out = (a - mn) / (mx - mn)
+    out[~mask] = 0.0
     return np.clip(out, 0.0, 1.0)
 
 
-def percentile_clip(arr: np.ndarray, low: float = 2.0, high: float = 98.0) -> np.ndarray:
-    arr = np.asarray(arr, dtype=np.float32)
-    lo = np.nanpercentile(arr, low)
-    hi = np.nanpercentile(arr, high)
-    if not np.isfinite(lo) or not np.isfinite(hi) or hi - lo < 1e-9:
-        return np.nan_to_num(arr, nan=0.0)
-    return np.clip(arr, lo, hi)
+def percentile_clip(a, lo=2, hi=98):
+    a = np.asarray(a, dtype=np.float32)
+    if a.size == 0:
+        return a
+    l = np.nanpercentile(a, lo)
+    h = np.nanpercentile(a, hi)
+    if not np.isfinite(l) or not np.isfinite(h) or abs(h - l) < 1e-9:
+        return np.nan_to_num(a, nan=0.0)
+    return np.clip(a, l, h)
 
 
-def rgb_to_gray(rgb: np.ndarray) -> np.ndarray:
-    if rgb.ndim == 2:
-        return rgb.astype(np.float32)
-    if rgb.shape[2] == 1:
-        return rgb[:, :, 0].astype(np.float32)
-    r = rgb[:, :, 0].astype(np.float32)
-    g = rgb[:, :, 1].astype(np.float32)
-    b = rgb[:, :, 2].astype(np.float32)
-    return 0.299 * r + 0.587 * g + 0.114 * b
-
-
-def resize_for_analysis(img: np.ndarray, max_dim: int = 1600) -> np.ndarray:
-    h, w = img.shape[:2]
-    scale = min(1.0, max_dim / max(h, w))
-    if scale >= 1.0:
-        return img
-    new_w = max(1, int(w * scale))
-    new_h = max(1, int(h * scale))
-    if cv2 is not None:
-        return cv2.resize(img, (new_w, new_h), interpolation=cv2.INTER_AREA)
-    ys = np.linspace(0, h - 1, new_h).astype(int)
-    xs = np.linspace(0, w - 1, new_w).astype(int)
-    return img[np.ix_(ys, xs)]
-
-
-def band_stack_to_display(arr: np.ndarray) -> np.ndarray:
+def ensure_rgb(arr):
     arr = np.asarray(arr)
     if arr.ndim == 2:
         arr = np.stack([arr] * 3, axis=-1)
-    if arr.shape[2] >= 3:
-        disp = arr[:, :, :3].astype(np.float32)
-    else:
-        disp = np.repeat(arr[:, :, :1].astype(np.float32), 3, axis=2)
-    disp = percentile_clip(disp)
-    return normalize01(disp)
+    if arr.shape[2] == 1:
+        arr = np.repeat(arr, 3, axis=2)
+    if arr.shape[2] > 3:
+        arr = arr[:, :, :3]
+    return arr.astype(np.float32)
 
 
-def pseudo_rgb_from_multiband(arr: np.ndarray) -> np.ndarray:
-    arr = np.asarray(arr)
-    if arr.ndim != 3:
-        return band_stack_to_display(arr)
-    bands = arr.shape[2]
-    if bands >= 3:
-        rgb = arr[:, :, :3]
-    else:
-        rgb = np.repeat(arr[:, :, :1], 3, axis=2)
-    return band_stack_to_display(rgb)
+def resize_for_speed(arr, max_dim=1600):
+    h, w = arr.shape[:2]
+    scale = min(1.0, max_dim / max(h, w))
+    if scale >= 1.0:
+        return arr
+    nh, nw = max(1, int(h * scale)), max(1, int(w * scale))
+    if cv2 is not None:
+        return cv2.resize(arr, (nw, nh), interpolation=cv2.INTER_AREA)
+    ys = np.linspace(0, h - 1, nh).astype(int)
+    xs = np.linspace(0, w - 1, nw).astype(int)
+    if arr.ndim == 2:
+        return arr[np.ix_(ys, xs)]
+    return arr[np.ix_(ys, xs, np.arange(arr.shape[2]))]
 
 
-# =========================
-# File Readers
-# =========================
-def read_uploaded_image(file_obj) -> Tuple[np.ndarray, Dict[str, Any]]:
+def rgb_preview(arr):
+    arr = ensure_rgb(arr)
+    arr = percentile_clip(arr)
+    return normalize01(arr)
+
+
+def safe_uint8_gray(gray):
+    gray = np.asarray(gray, dtype=np.float32)
+    gray = normalize01(percentile_clip(gray))
+    return (gray * 255).astype(np.uint8)
+
+
+def latlon_from_pixel_approx(px, py, center_lat, center_lon, radius_m, width, height):
+    """
+    Approximate georeferencing when only a manual AOI point is available.
+    Assumes the uploaded image covers a square AOI of side 2*radius_m.
+    """
+    if width <= 1 or height <= 1:
+        return center_lat, center_lon
+
+    meters_per_deg_lat = 111_320.0
+    meters_per_deg_lon = 111_320.0 * max(0.2, math.cos(math.radians(center_lat)))
+
+    x_m = (px / max(1, width - 1) - 0.5) * 2 * radius_m
+    y_m = (0.5 - py / max(1, height - 1)) * 2 * radius_m
+
+    lat = center_lat + (y_m / meters_per_deg_lat)
+    lon = center_lon + (x_m / meters_per_deg_lon)
+    return float(lat), float(lon)
+
+
+# -----------------------------
+# Input Readers
+# -----------------------------
+def read_image_upload(uploaded_file):
     if Image is None:
-        raise RuntimeError("PIL is required for image uploads.")
-    image = Image.open(file_obj).convert("RGB")
-    arr = np.array(image)
+        raise RuntimeError("PIL unavailable.")
+    img = Image.open(io.BytesIO(uploaded_file.getvalue())).convert("RGB")
+    arr = np.array(img)
     meta = {
-        "type": "image",
+        "kind": "image",
         "width": arr.shape[1],
         "height": arr.shape[0],
         "bands": 3,
@@ -176,17 +203,17 @@ def read_uploaded_image(file_obj) -> Tuple[np.ndarray, Dict[str, Any]]:
     return arr, meta
 
 
-def read_uploaded_raster(file_obj) -> Tuple[np.ndarray, Dict[str, Any]]:
+def read_raster_upload(uploaded_file):
     if rasterio is None:
-        raise RuntimeError("rasterio is required for raster uploads.")
-    with rasterio.open(file_obj) as src:
+        raise RuntimeError("rasterio unavailable.")
+    with rasterio.open(io.BytesIO(uploaded_file.getvalue())) as src:
         arr = src.read()
         arr = np.moveaxis(arr, 0, -1)
         meta = {
-            "type": "raster",
-            "bands": arr.shape[2],
+            "kind": "raster",
             "width": arr.shape[1],
             "height": arr.shape[0],
+            "bands": arr.shape[2],
             "crs": str(src.crs) if src.crs else None,
             "transform": src.transform,
             "nodata": src.nodata,
@@ -194,42 +221,60 @@ def read_uploaded_raster(file_obj) -> Tuple[np.ndarray, Dict[str, Any]]:
     return arr, meta
 
 
-def load_file(uploaded_file):
-    suffix = os.path.splitext(uploaded_file.name.lower())[1]
-    if suffix in [".tif", ".tiff"]:
-        return read_uploaded_raster(uploaded_file)
-    return read_uploaded_image(uploaded_file)
+def read_kml(uploaded_file):
+    if ET is None:
+        raise RuntimeError("XML parser unavailable.")
+    txt = uploaded_file.getvalue().decode("utf-8", errors="ignore")
+    root = ET.fromstring(txt)
+    ns = {"kml": "http://www.opengis.net/kml/2.2"}
+    rows = []
+    for pm in root.findall(".//kml:Placemark", ns):
+        name = pm.findtext("kml:name", default="", namespaces=ns)
+        coord_text = pm.findtext(".//kml:coordinates", default="", namespaces=ns)
+        if not coord_text:
+            continue
+        lon, lat, *_ = [c.strip() for c in coord_text.split(",")]
+        rows.append({"name": name, "lat": as_float(lat), "lon": as_float(lon)})
+    return pd.DataFrame(rows)
 
 
-# =========================
-# Geology / GeoAI Core
-# =========================
-def compute_lineaments(gray: np.ndarray) -> Dict[str, Any]:
-    gray = normalize01(percentile_clip(gray)) * 255.0
-    gray_u8 = gray.astype(np.uint8)
+def read_geojson(uploaded_file):
+    if gpd is None:
+        raise RuntimeError("geopandas unavailable.")
+    return gpd.read_file(io.BytesIO(uploaded_file.getvalue()))
+
+
+# -----------------------------
+# Analysis Core
+# -----------------------------
+def compute_structure(gray):
+    gray_u8 = safe_uint8_gray(gray)
 
     if cv2 is None:
         gy, gx = np.gradient(gray.astype(np.float32))
         mag = np.sqrt(gx**2 + gy**2)
         edges = normalize01(mag)
+        line_map = normalize01(edges)
+        structure_strength = float(np.mean(edges))
+        anisotropy = 0.5
         return {
             "edge_map": edges,
-            "line_map": edges,
-            "structure_strength": float(np.nanmean(edges)),
+            "line_map": line_map,
+            "structure_strength": float(np.clip(structure_strength, 0, 1)),
             "edge_density": float((edges > np.quantile(edges, 0.85)).mean()),
-            "anisotropy": 0.5,
+            "anisotropy": anisotropy,
         }
 
     blur = cv2.GaussianBlur(gray_u8, (5, 5), 0)
-    edges_u8 = cv2.Canny(blur, 50, 150)
+    edges_u8 = cv2.Canny(blur, 45, 140)
     edges = edges_u8.astype(np.float32) / 255.0
 
     lines = cv2.HoughLinesP(
         edges_u8,
-        1,
-        np.pi / 180,
+        rho=1,
+        theta=np.pi / 180,
         threshold=60,
-        minLineLength=max(20, min(gray.shape) // 15),
+        minLineLength=max(18, min(gray.shape[:2]) // 16),
         maxLineGap=10,
     )
 
@@ -242,98 +287,101 @@ def compute_lineaments(gray: np.ndarray) -> Dict[str, Any]:
             cv2.line(line_map, (x1, y1), (x2, y2), 1.0, 1)
             angles.append(math.degrees(math.atan2(y2 - y1, x2 - x1)))
 
-    edge_density = float((edges > 0.1).mean())
-    structure_strength = float(0.55 * edge_density + 0.45 * line_map.mean())
+    edge_density = float((edges > 0.12).mean())
+    structure_strength = float(np.clip(0.58 * edge_density + 0.42 * line_map.mean(), 0, 1))
 
     if len(angles) >= 5:
         ang = np.asarray(angles, dtype=np.float32)
-        anisotropy = float(1.0 - (np.std(np.mod(ang, 180.0)) / 90.0))
-        anisotropy = float(np.clip(anisotropy, 0.0, 1.0))
+        anisotropy = float(np.clip(1.0 - (np.std(np.mod(ang, 180.0)) / 90.0), 0, 1))
     else:
-        anisotropy = 0.55 if lines is not None else 0.35
+        anisotropy = 0.45 if lines is not None else 0.25
 
     return {
         "edge_map": edges,
         "line_map": line_map,
-        "structure_strength": float(np.clip(structure_strength, 0.0, 1.0)),
-        "edge_density": float(np.clip(edge_density, 0.0, 1.0)),
+        "structure_strength": structure_strength,
+        "edge_density": edge_density,
         "anisotropy": anisotropy,
     }
 
 
-def compute_alteration_proxy(arr: np.ndarray, meta: Dict[str, Any]) -> Dict[str, Any]:
-    arr = np.asarray(arr).astype(np.float32)
+def compute_alteration(arr):
+    arr = np.asarray(arr, dtype=np.float32)
     if arr.ndim == 2:
         arr = np.stack([arr] * 3, axis=-1)
 
     bands = arr.shape[2]
 
+    # Best-effort SWIR-like logic when multispectral bands exist
     if bands >= 12:
         b3 = arr[:, :, 2]
         b4 = arr[:, :, 3]
         b8 = arr[:, :, 7]
-        b9 = arr[:, :, 8] if bands > 8 else arr[:, :, -1]
-        b11 = arr[:, :, 10] if bands > 10 else arr[:, :, -1]
-        b12 = arr[:, :, 11] if bands > 11 else arr[:, :, -1]
+        b11 = arr[:, :, 10]
+        b12 = arr[:, :, 11]
 
-        clay_proxy = normalize01((b11 / (b8 + 1e-6)) + (b12 / (b11 + 1e-6)))
-        silica_proxy = normalize01((b4 / (b3 + 1e-6)) + (b9 / (b8 + 1e-6)))
-        iron_proxy = normalize01((b4 + 1e-6) / (b8 + 1e-6))
+        clay = normalize01((b11 / (b8 + 1e-6)) + (b12 / (b11 + 1e-6)))
+        silica = normalize01((b4 / (b3 + 1e-6)) + (b11 / (b8 + 1e-6)))
+        iron = normalize01((b4 + 1e-6) / (b8 + 1e-6))
+    elif bands >= 4:
+        b2 = arr[:, :, 1]
+        b3 = arr[:, :, 2]
+        b4 = arr[:, :, 3]
+        brightness = normalize01((b2 + b3 + b4) / 3.0)
+        contrast = normalize01(np.max(arr[:, :, :3], axis=2) - np.min(arr[:, :, :3], axis=2))
+        clay = normalize01(contrast * (1.0 - brightness))
+        silica = normalize01(np.abs(b4 - b2))
+        iron = normalize01((b4 - b3) + (b4 - b2))
     else:
         rgb = normalize01(arr[:, :, :3])
-        contrast = np.max(rgb, axis=2) - np.min(rgb, axis=2)
         brightness = np.mean(rgb, axis=2)
-        clay_proxy = normalize01(contrast * (1.0 - brightness))
-        silica_proxy = normalize01(np.abs(rgb[:, :, 0] - rgb[:, :, 2]))
-        iron_proxy = normalize01((rgb[:, :, 0] - rgb[:, :, 1]) + (rgb[:, :, 0] - rgb[:, :, 2]))
+        contrast = np.max(rgb, axis=2) - np.min(rgb, axis=2)
+        clay = normalize01(contrast * (1.0 - brightness))
+        silica = normalize01(np.abs(rgb[:, :, 0] - rgb[:, :, 2]))
+        iron = normalize01(rgb[:, :, 0] - rgb[:, :, 1])
 
-    alteration_map = normalize01(0.45 * clay_proxy + 0.35 * silica_proxy + 0.20 * iron_proxy)
+    alteration = normalize01(0.45 * clay + 0.35 * silica + 0.20 * iron)
 
     return {
-        "clay_map": clay_proxy,
-        "silica_map": silica_proxy,
-        "iron_map": iron_proxy,
-        "alteration_map": alteration_map,
-        "clay_strength": float(np.mean(clay_proxy)),
-        "silica_strength": float(np.mean(silica_proxy)),
-        "iron_strength": float(np.mean(iron_proxy)),
-        "alteration_strength": float(np.mean(alteration_map)),
+        "clay_map": clay,
+        "silica_map": silica,
+        "iron_map": iron,
+        "alteration_map": alteration,
+        "clay_strength": float(np.mean(clay)),
+        "silica_strength": float(np.mean(silica)),
+        "iron_strength": float(np.mean(iron)),
+        "alteration_strength": float(np.mean(alteration)),
     }
 
 
-def compute_pattern_map(edge_map: np.ndarray, line_map: np.ndarray) -> Dict[str, Any]:
+def compute_pattern(structure_map, line_map):
     if cv2 is not None:
         kernel = np.ones((5, 5), np.uint8)
-        dil = cv2.dilate((edge_map > 0.2).astype(np.uint8), kernel, iterations=1)
-        ero = cv2.erode((edge_map > 0.2).astype(np.uint8), kernel, iterations=1)
+        bin_edges = (structure_map > 0.2).astype(np.uint8)
+        dil = cv2.dilate(bin_edges, kernel, iterations=1)
+        ero = cv2.erode(bin_edges, kernel, iterations=1)
         ring = np.clip(dil - ero, 0, 1).astype(np.float32)
     else:
-        ring = normalize01(edge_map)
+        ring = normalize01(structure_map)
 
-    combined = normalize01(0.55 * ring + 0.45 * normalize01(line_map))
+    combined = normalize01(0.6 * ring + 0.4 * normalize01(line_map))
     return {
         "pattern_map": combined,
         "pattern_strength": float(np.mean(combined)),
     }
 
 
-def score_targets(
-    structure: Dict[str, Any],
-    alteration: Dict[str, Any],
-    pattern: Dict[str, Any],
-    aoi: Optional[Dict[str, float]] = None,
-) -> Dict[str, Any]:
-    structure_strength = structure["structure_strength"]
-    anisotropy = structure["anisotropy"]
-    clay_strength = alteration["clay_strength"]
-    silica_strength = alteration["silica_strength"]
-    iron_strength = alteration["iron_strength"]
-    pattern_strength = pattern["pattern_strength"]
-    alteration_strength = alteration["alteration_strength"]
+def target_decision(structure, alteration, pattern):
+    s = structure["structure_strength"]
+    p = pattern["pattern_strength"]
+    c = alteration["clay_strength"]
+    si = alteration["silica_strength"]
+    fe = alteration["iron_strength"]
+    anis = structure["anisotropy"]
 
-    has_structure = structure_strength >= 0.18
-    has_pattern = pattern_strength >= 0.08
-    has_clay = clay_strength >= 0.12
+    has_structure = s >= 0.18
+    has_pattern = p >= 0.08
+    has_clay = c >= 0.12
 
     if not has_structure:
         status = "Reject"
@@ -344,128 +392,60 @@ def score_targets(
     else:
         status = "Target-B"
 
-    p_score = 100.0 * np.clip(
-        0.40 * structure_strength
-        + 0.25 * pattern_strength
-        + 0.20 * clay_strength
-        + 0.10 * silica_strength
-        + 0.05 * iron_strength,
-        0,
-        1,
-    )
-    h_score = 100.0 * np.clip(
-        0.35 * alteration_strength
-        + 0.35 * structure_strength
-        + 0.15 * pattern_strength
-        + 0.15 * anisotropy,
-        0,
-        1,
-    )
+    P = 100.0 * np.clip(0.40 * s + 0.25 * p + 0.20 * c + 0.10 * si + 0.05 * fe, 0, 1)
+    H = 100.0 * np.clip(0.35 * alteration["alteration_strength"] + 0.35 * s + 0.15 * p + 0.15 * anis, 0, 1)
+    GPI = 100.0 * np.clip(0.45 * s + 0.25 * c + 0.15 * p + 0.10 * si + 0.05 * fe, 0, 1)
 
-    depth_score = 0.4 * structure_strength + 0.4 * alteration_strength + 0.2 * pattern_strength
+    depth_score = 0.4 * s + 0.4 * alteration["alteration_strength"] + 0.2 * p
     if depth_score < 0.25:
         depth_band = "Surface"
     elif depth_score < 0.40:
         depth_band = "0–5m shallow"
     elif depth_score < 0.60:
-        depth_band = "5–20m near-surface"
+        depth_band = "5–20m near"
     elif depth_score < 0.80:
         depth_band = "20–50m buried"
     else:
         depth_band = ">50m deep"
 
-    if aoi:
-        lat = safe_float(aoi.get("lat"))
-        lon = safe_float(aoi.get("lon"))
-        radius_m = safe_float(aoi.get("radius_m"), 62.0)
-    else:
-        lat = 0.0
-        lon = 0.0
-        radius_m = 62.0
-
     indicators = {
-        "structure": has_structure,
-        "pattern": has_pattern,
-        "clay": has_clay,
-        "silica_support": silica_strength >= 0.12,
-        "iron_oxide": iron_strength >= 0.12,
-        "cluster_like": pattern_strength >= 0.12 and structure_strength >= 0.18,
+        "structure": bool(has_structure),
+        "pattern": bool(has_pattern),
+        "clay": bool(has_clay),
+        "silica": bool(si >= 0.12),
+        "iron": bool(fe >= 0.12),
+        "anisotropy": bool(anis >= 0.45),
     }
+    cluster_count = int(sum(indicators.values()))
 
-    cluster_count = sum(bool(v) for v in indicators.values())
-    confidence = float(np.clip((p_score * 0.55 + h_score * 0.45) / 100.0, 0, 1))
+    confidence = float(np.clip((P * 0.45 + H * 0.35 + GPI * 0.20) / 100.0, 0, 1))
 
     return {
-        "lat": lat,
-        "lon": lon,
-        "radius_m": radius_m,
         "status": status,
-        "P": round(p_score, 1),
-        "H": round(h_score, 1),
+        "P": round(float(P), 1),
+        "H": round(float(H), 1),
+        "GPI": round(float(GPI), 1),
         "confidence": round(confidence, 3),
         "depth_band": depth_band,
-        "cluster_count": int(cluster_count),
+        "cluster_count": cluster_count,
         "indicators": indicators,
+        "kill_reason": (
+            "No Structure" if not has_structure else
+            "No Pattern" if not has_pattern else
+            "No Clay" if not has_clay else
+            "Pass"
+        ),
     }
 
 
-def build_targets_dataframe(
-    result: Dict[str, Any],
-    structure: Dict[str, Any],
-    alteration: Dict[str, Any],
-    pattern: Dict[str, Any],
-) -> pd.DataFrame:
-    rows = [
-        {
-            "indicator": "Structure",
-            "value": round(structure["structure_strength"], 3),
-            "threshold": 0.18,
-            "pass": structure["structure_strength"] >= 0.18,
-        },
-        {
-            "indicator": "Pattern",
-            "value": round(pattern["pattern_strength"], 3),
-            "threshold": 0.08,
-            "pass": pattern["pattern_strength"] >= 0.08,
-        },
-        {
-            "indicator": "Clay",
-            "value": round(alteration["clay_strength"], 3),
-            "threshold": 0.12,
-            "pass": alteration["clay_strength"] >= 0.12,
-        },
-        {
-            "indicator": "Silica",
-            "value": round(alteration["silica_strength"], 3),
-            "threshold": 0.12,
-            "pass": alteration["silica_strength"] >= 0.12,
-        },
-        {
-            "indicator": "Iron Oxide",
-            "value": round(alteration["iron_strength"], 3),
-            "threshold": 0.12,
-            "pass": alteration["iron_strength"] >= 0.12,
-        },
-        {
-            "indicator": "Status",
-            "value": result["status"],
-            "threshold": "",
-            "pass": result["status"] == "Target-B",
-        },
-        {"indicator": "P", "value": result["P"], "threshold": 60, "pass": result["P"] >= 60},
-        {"indicator": "H", "value": result["H"], "threshold": 60, "pass": result["H"] >= 60},
-    ]
-    return pd.DataFrame(rows)
+def extract_targets(edge_map, alteration_map, line_map, n=5):
+    structure_map = normalize01(0.6 * edge_map + 0.4 * line_map)
+    composite = normalize01(0.45 * structure_map + 0.35 * alteration_map + 0.20 * normalize01(line_map))
 
-
-def extract_top_targets(edge_map: np.ndarray, alteration_map: np.ndarray, line_map: np.ndarray, n: int = 5) -> pd.DataFrame:
-    structure_score = normalize01(0.6 * edge_map + 0.4 * line_map)
-    composite = normalize01(0.45 * structure_score + 0.35 * alteration_map + 0.20 * normalize01(line_map))
     flat = composite.ravel()
     if flat.size == 0:
         return pd.DataFrame(columns=["rank", "x", "y", "score"])
 
-    h, w = composite.shape
     q = np.quantile(flat, 0.98)
     ys, xs = np.where(composite >= q)
 
@@ -476,184 +456,309 @@ def extract_top_targets(edge_map: np.ndarray, alteration_map: np.ndarray, line_m
     else:
         scores = composite[ys, xs]
 
-    pts = np.column_stack([xs, ys]).astype(float)
-    if len(pts) > 0 and DBSCAN is not None:
-        labels = DBSCAN(eps=max(10, min(h, w) * 0.02), min_samples=1).fit_predict(pts)
+    points = np.column_stack([xs, ys]).astype(float)
+
+    if len(points) > 0 and DBSCAN is not None:
+        labels = DBSCAN(eps=max(10, min(composite.shape) * 0.02), min_samples=1).fit_predict(points)
     else:
-        labels = np.arange(len(pts))
+        labels = np.arange(len(points))
 
-    clustered = []
-    for label in np.unique(labels):
-        idxs = np.where(labels == label)[0]
+    candidates = []
+    for lab in np.unique(labels):
+        idxs = np.where(labels == lab)[0]
         best = idxs[np.argmax(scores[idxs])]
-        clustered.append((xs[best], ys[best], float(scores[best])))
+        candidates.append((int(xs[best]), int(ys[best]), float(scores[best])))
 
-    clustered.sort(key=lambda t: t[2], reverse=True)
-    clustered = clustered[:n]
+    candidates.sort(key=lambda t: t[2], reverse=True)
+    candidates = candidates[:n]
 
-    return pd.DataFrame(
-        [
-            {"rank": i + 1, "x": int(x), "y": int(y), "score": round(score, 4)}
-            for i, (x, y, score) in enumerate(clustered)
-        ]
+    df = pd.DataFrame(
+        [{"rank": i + 1, "x": x, "y": y, "score": round(score, 4)} for i, (x, y, score) in enumerate(candidates)]
     )
+    return df
 
 
-def generate_kml(targets: pd.DataFrame, name: str = "BOUH_Targets") -> str:
-    def placemark(row) -> str:
-        return f"""
-        <Placemark>
-            <name>Target {int(row['rank'])}</name>
-            <description>Score: {row['score']}</description>
-            <Point><coordinates>{row['x']},{row['y']},0</coordinates></Point>
-        </Placemark>
-        """
-
-    body = "\n".join(placemark(r) for _, r in targets.iterrows())
+def make_kml(df, name="BOUH_Targets"):
+    body = []
+    for _, r in df.iterrows():
+        body.append(
+            f"""
+            <Placemark>
+                <name>Target {int(r["rank"])}</name>
+                <description>Score: {r["score"]}</description>
+                <Point><coordinates>{r.get("lon", 0)},{r.get("lat", 0)},0</coordinates></Point>
+            </Placemark>
+            """
+        )
     return f"""<?xml version="1.0" encoding="UTF-8"?>
 <kml xmlns="http://www.opengis.net/kml/2.2">
 <Document>
-    <name>{name}</name>
-    {body}
+<name>{name}</name>
+{''.join(body)}
 </Document>
 </kml>"""
 
 
-def analysis_pipeline(
-    arr: np.ndarray,
-    meta: Dict[str, Any],
-    aoi: Optional[Dict[str, float]],
-    top_n: int = 5,
-) -> Dict[str, Any]:
-    arr = resize_for_analysis(arr, max_dim=1600)
-    display_rgb = pseudo_rgb_from_multiband(arr)
-    gray = rgb_to_gray(display_rgb)
+def build_indicator_table(decision, structure, alteration, pattern):
+    rows = [
+        {"indicator": "Structure", "value": round(structure["structure_strength"], 3), "threshold": 0.18, "pass": structure["structure_strength"] >= 0.18},
+        {"indicator": "Pattern", "value": round(pattern["pattern_strength"], 3), "threshold": 0.08, "pass": pattern["pattern_strength"] >= 0.08},
+        {"indicator": "Clay", "value": round(alteration["clay_strength"], 3), "threshold": 0.12, "pass": alteration["clay_strength"] >= 0.12},
+        {"indicator": "Silica", "value": round(alteration["silica_strength"], 3), "threshold": 0.12, "pass": alteration["silica_strength"] >= 0.12},
+        {"indicator": "Iron Oxide", "value": round(alteration["iron_strength"], 3), "threshold": 0.12, "pass": alteration["iron_strength"] >= 0.12},
+        {"indicator": "P", "value": decision["P"], "threshold": 60, "pass": decision["P"] >= 60},
+        {"indicator": "H", "value": decision["H"], "threshold": 60, "pass": decision["H"] >= 60},
+        {"indicator": "GPI", "value": decision["GPI"], "threshold": 60, "pass": decision["GPI"] >= 60},
+    ]
+    return pd.DataFrame(rows)
 
-    structure = compute_lineaments(gray)
-    alteration = compute_alteration_proxy(arr, meta)
-    pattern = compute_pattern_map(structure["edge_map"], structure["line_map"])
-    result = score_targets(structure, alteration, pattern, aoi=aoi)
-    targets = extract_top_targets(structure["edge_map"], alteration["alteration_map"], structure["line_map"], n=top_n)
-    detail_df = build_targets_dataframe(result, structure, alteration, pattern)
 
-    if result["status"] == "Reject":
-        decision_note = "No Structure or No Pattern threshold met."
-    elif result["status"] == "HOLD":
-        decision_note = "Structure and pattern exist, but clay confirmation is weak."
-    else:
-        decision_note = "Meets Target-B threshold under current rules."
+def analyze_array(arr, meta, aoi=None, top_n=5):
+    arr = resize_for_speed(arr, max_dim=1600)
+    rgb = rgb_preview(arr)
+    gray = np.mean(rgb, axis=2)
+
+    structure = compute_structure(gray)
+    alteration = compute_alteration(arr)
+    pattern = compute_pattern(structure["edge_map"], structure["line_map"])
+    decision = target_decision(structure, alteration, pattern)
+    targets = extract_targets(structure["edge_map"], alteration["alteration_map"], structure["line_map"], n=top_n)
+    indicators = build_indicator_table(decision, structure, alteration, pattern)
+
+    note = (
+        "No Structure or No Pattern threshold met."
+        if decision["status"] == "Reject"
+        else "Structure exists but clay confirmation is weak."
+        if decision["status"] == "HOLD"
+        else "Meets Target-B threshold under current rules."
+    )
 
     return {
-        "display_rgb": display_rgb,
+        "rgb": rgb,
         "gray": gray,
         "structure": structure,
         "alteration": alteration,
         "pattern": pattern,
-        "result": result,
+        "decision": decision,
         "targets": targets,
-        "detail_df": detail_df,
-        "decision_note": decision_note,
+        "indicators": indicators,
+        "note": note,
     }
 
 
-# =========================
+def enrich_targets_geo(targets_df, meta, aoi=None):
+    out = targets_df.copy()
+    if out.empty:
+        return out
+
+    if meta.get("transform") is not None and rasterio is not None and rio_xy is not None:
+        lat_list = []
+        lon_list = []
+        for _, r in out.iterrows():
+            row = int(r["y"])
+            col = int(r["x"])
+            x, y = rio_xy(meta["transform"], row, col)
+            lon_list.append(float(x))
+            lat_list.append(float(y))
+        out["lon"] = lon_list
+        out["lat"] = lat_list
+        return out
+
+    if aoi and all(k in aoi for k in ("lat", "lon", "radius_m")):
+        lat_list = []
+        lon_list = []
+        for _, r in out.iterrows():
+            lat, lon = latlon_from_pixel_approx(
+                px=float(r["x"]),
+                py=float(r["y"]),
+                center_lat=float(aoi["lat"]),
+                center_lon=float(aoi["lon"]),
+                radius_m=float(aoi["radius_m"]),
+                width=int(aoi.get("width", 1)),
+                height=int(aoi.get("height", 1)),
+            )
+            lat_list.append(lat)
+            lon_list.append(lon)
+        out["lat"] = lat_list
+        out["lon"] = lon_list
+        return out
+
+    return out
+
+
+# -----------------------------
 # UI
-# =========================
-st.title(f"{APP_ICON} {APP_TITLE}")
+# -----------------------------
+st.title(f"{APP_ICON} BOUH SUPREME")
+st.markdown("### Geo-Operational Intelligence")
 st.caption("Structure → Pattern → Alteration → Confirmation → Decision")
 
 with st.sidebar:
     st.header("Mission Control")
+
+    source_mode = st.radio(
+        "Source mode",
+        ["Raster/Image", "KML/GeoJSON Points"],
+        index=0,
+    )
+
     uploaded = st.file_uploader(
-        "Upload raster / image",
-        type=["tif", "tiff", "png", "jpg", "jpeg", "webp"],
+        "Upload raster / image / vector",
+        type=["tif", "tiff", "png", "jpg", "jpeg", "webp", "kml", "geojson", "json"],
         accept_multiple_files=False,
     )
 
+    st.subheader("AOI / Context")
     aoi_mode = st.radio("AOI mode", ["None", "Manual point"], index=1)
     if aoi_mode == "Manual point":
-        lat = st.number_input("AOI latitude", value=0.0, format="%.6f")
-        lon = st.number_input("AOI longitude", value=0.0, format="%.6f")
+        aoi_lat = st.number_input("AOI latitude", value=0.0, format="%.6f")
+        aoi_lon = st.number_input("AOI longitude", value=0.0, format="%.6f")
+        aoi_radius = st.slider("AOI radius (m)", 20, 500, 62, 1)
     else:
-        lat = 0.0
-        lon = 0.0
+        aoi_lat = 0.0
+        aoi_lon = 0.0
+        aoi_radius = 62
 
-    radius_m = st.slider("AOI radius (m)", 20, 500, 62, 1)
+    st.subheader("Targeting rules")
     top_n = st.slider("Targets to extract", 3, 10, 5)
-    run = st.button("Run full analysis", type="primary")
+    min_structure = st.slider("Structure threshold", 0.05, 0.40, 0.18, 0.01)
+    min_pattern = st.slider("Pattern threshold", 0.02, 0.30, 0.08, 0.01)
+    min_clay = st.slider("Clay threshold", 0.02, 0.35, 0.12, 0.01)
 
-    st.divider()
-    st.subheader("Decision rules")
+    st.subheader("Decision protocol")
     st.write("No Structure = Reject")
     st.write("No Pattern = Reject")
     st.write("No Clay = HOLD")
-    st.write("Cluster preferred over isolated anomaly")
+    st.write("Cluster > isolated anomaly")
 
-    st.divider()
-    st.subheader("Optional integration")
-    st.text_input("GEE project (optional)", value=os.getenv("GEE_PROJECT", ""))
-    st.text_input("PostGIS URL (optional)", value=os.getenv("POSTGIS_URL", ""), type="password")
-
+    run = st.button("Run full analysis", type="primary")
 
 if uploaded is None:
-    st.info("Upload a raster or image to start the targeting workflow.")
+    st.info("Upload a raster, image, KML, or GeoJSON to begin.")
     st.stop()
 
+ext = os.path.splitext(uploaded.name.lower())[1]
+
 try:
-    arr, meta = load_file(uploaded)
+    if ext in [".kml"] and source_mode == "KML/GeoJSON Points":
+        vec = read_kml(uploaded)
+        st.session_state.analysis = {
+            "kind": "vector",
+            "vector": vec,
+        }
+        st.success(f"Loaded {len(vec)} point(s) from KML.")
+        st.dataframe(vec, use_container_width=True, hide_index=True)
+        st.stop()
+
+    if ext in [".geojson", ".json"] and source_mode == "KML/GeoJSON Points":
+        if gpd is None:
+            raise RuntimeError("geopandas not available.")
+        vec = read_geojson(uploaded)
+        st.session_state.analysis = {
+            "kind": "vector",
+            "vector": vec,
+        }
+        st.success(f"Loaded vector layer with {len(vec)} feature(s).")
+        st.dataframe(vec.head(20), use_container_width=True, hide_index=True)
+        st.stop()
+
+    if ext in [".tif", ".tiff"]:
+        arr, meta = read_raster_upload(uploaded)
+    else:
+        arr, meta = read_image_upload(uploaded)
+
     st.session_state.source_name = uploaded.name
-    st.session_state.raster_meta = meta
-except Exception as exc:
-    st.error(f"Failed to read file: {exc}")
+    st.session_state.source_kind = meta["kind"]
+    st.session_state.meta = meta
+
+except Exception as e:
+    st.error(f"Failed to load source: {e}")
     st.stop()
 
 aoi = None
 if aoi_mode == "Manual point":
-    aoi = {"lat": lat, "lon": lon, "radius_m": radius_m}
+    aoi = {
+        "lat": aoi_lat,
+        "lon": aoi_lon,
+        "radius_m": aoi_radius,
+        "width": meta["width"],
+        "height": meta["height"],
+    }
     st.session_state.aoi = aoi
 
-if run or st.session_state.analysis_result is None:
-    with st.spinner("Running structural, spectral, and clustering analysis..."):
-        st.session_state.analysis_result = analysis_pipeline(arr, meta, aoi, top_n=top_n)
-        st.session_state.targets = st.session_state.analysis_result["targets"]
+# Dynamic threshold override
+# Re-run scoring with UI thresholds if needed
+if run or st.session_state.analysis is None:
+    with st.spinner("Running structural, spectral, and cluster analysis..."):
+        st.session_state.analysis = analyze_array(arr, meta, aoi=aoi, top_n=top_n)
 
-result_pack = st.session_state.analysis_result
-result = result_pack["result"]
-structure = result_pack["structure"]
-alteration = result_pack["alteration"]
-pattern = result_pack["pattern"]
-targets = result_pack["targets"]
-detail_df = result_pack["detail_df"]
+analysis = st.session_state.analysis
+structure = analysis["structure"]
+alteration = analysis["alteration"]
+pattern = analysis["pattern"]
 
-# KPI row
-k1, k2, k3, k4, k5 = st.columns(5)
-k1.metric("Status", result["status"])
-k2.metric("P Score", f"{result['P']}")
-k3.metric("H Score", f"{result['H']}")
-k4.metric("Confidence", f"{result['confidence']:.2f}")
-k5.metric("Depth", result["depth_band"])
+# Apply user thresholds if changed
+decision = analysis["decision"].copy()
+status = decision["status"]
 
-tab1, tab2, tab3, tab4 = st.tabs(["Overview", "Maps", "Targets", "Export"])
+custom_structure_pass = structure["structure_strength"] >= min_structure
+custom_pattern_pass = pattern["pattern_strength"] >= min_pattern
+custom_clay_pass = alteration["clay_strength"] >= min_clay
 
-with tab1:
-    c1, c2 = st.columns([1.15, 0.85])
-    with c1:
+if not custom_structure_pass:
+    status = "Reject"
+    kill_reason = "No Structure"
+elif not custom_pattern_pass:
+    status = "Reject"
+    kill_reason = "No Pattern"
+elif not custom_clay_pass:
+    status = "HOLD"
+    kill_reason = "No Clay"
+else:
+    status = "Target-B"
+    kill_reason = "Pass"
+
+decision["status"] = status
+decision["kill_reason"] = kill_reason
+
+targets = enrich_targets_geo(analysis["targets"], meta, aoi=aoi)
+analysis["targets"] = targets
+analysis["decision"] = decision
+
+# KPIs
+c1, c2, c3, c4, c5 = st.columns(5)
+c1.metric("Status", decision["status"])
+c2.metric("P Score", f"{decision['P']}")
+c3.metric("H Score", f"{decision['H']}")
+c4.metric("GPI", f"{decision['GPI']}")
+c5.metric("Depth", decision["depth_band"])
+
+tab_overview, tab_maps, tab_targets, tab_export = st.tabs(["Overview", "Maps", "Targets", "Export"])
+
+with tab_overview:
+    left, right = st.columns([1.1, 0.9])
+
+    with left:
         st.subheader("Input preview")
-        st.image(result_pack["display_rgb"], clamp=True, use_container_width=True)
-    with c2:
-        st.subheader("Decision summary")
-        st.write(result_pack["decision_note"])
-        st.json(
-            {
-                "status": result["status"],
-                "lat": result["lat"],
-                "lon": result["lon"],
-                "radius_m": result["radius_m"],
-                "cluster_count": result["cluster_count"],
-            }
-        )
+        st.image(analysis["rgb"], use_container_width=True, clamp=True)
 
-        st.subheader("Signal strength")
+    with right:
+        st.subheader("Decision summary")
+        st.write(analysis["note"])
+
+        summary = {
+            "status": decision["status"],
+            "kill_reason": decision["kill_reason"],
+            "cluster_count": decision["cluster_count"],
+            "confidence": decision["confidence"],
+            "depth_band": decision["depth_band"],
+            "source": st.session_state.source_name,
+            "kind": st.session_state.source_kind,
+            "timestamp": datetime.utcnow().isoformat() + "Z",
+        }
+        st.json(summary)
+
+        st.subheader("Core signal levels")
         st.progress(float(np.clip(structure["structure_strength"], 0, 1)))
         st.write(f"Structure: {structure['structure_strength']:.3f}")
         st.write(f"Pattern: {pattern['pattern_strength']:.3f}")
@@ -662,95 +767,148 @@ with tab1:
         st.write(f"Iron oxide: {alteration['iron_strength']:.3f}")
 
     st.subheader("Indicator table")
-    st.dataframe(detail_df, use_container_width=True, hide_index=True)
+    st.dataframe(analysis["indicators"], use_container_width=True, hide_index=True)
 
-with tab2:
-    c1, c2 = st.columns(2)
-    with c1:
+    st.subheader("System logic")
+    logic_cards = st.columns(3)
+    with logic_cards[0]:
+        st.info("Structure gate controls first rejection.")
+    with logic_cards[1]:
+        st.info("Pattern gate validates confinement and repetition.")
+    with logic_cards[2]:
+        st.info("Clay confirmation upgrades to Target-B.")
+
+with tab_maps:
+    m1, m2 = st.columns(2)
+    with m1:
         st.subheader("Edge / Structure")
-        st.image(normalize01(structure["edge_map"]), clamp=True, use_container_width=True)
-    with c2:
-        st.subheader("Alteration map")
-        st.image(normalize01(alteration["alteration_map"]), clamp=True, use_container_width=True)
+        st.image(normalize01(structure["edge_map"]), use_container_width=True, clamp=True)
+    with m2:
+        st.subheader("Alteration")
+        st.image(normalize01(alteration["alteration_map"]), use_container_width=True, clamp=True)
 
-    c3, c4 = st.columns(2)
-    with c3:
+    m3, m4 = st.columns(2)
+    with m3:
         st.subheader("Lineament map")
-        st.image(normalize01(structure["line_map"]), clamp=True, use_container_width=True)
-    with c4:
+        st.image(normalize01(structure["line_map"]), use_container_width=True, clamp=True)
+    with m4:
         st.subheader("Pattern map")
-        st.image(normalize01(pattern["pattern_map"]), clamp=True, use_container_width=True)
+        st.image(normalize01(pattern["pattern_map"]), use_container_width=True, clamp=True)
 
-with tab3:
-    st.subheader("Top targets")
+    if pdk is not None and not targets.empty and {"lat", "lon"}.issubset(targets.columns):
+        st.subheader("Target map")
+        deck_layer = pdk.Layer(
+            "ScatterplotLayer",
+            data=targets,
+            get_position='[lon, lat]',
+            get_radius=40,
+            get_fill_color=[255, 0, 0, 150],
+            pickable=True,
+        )
+        center = {
+            "latitude": float(targets["lat"].mean()),
+            "longitude": float(targets["lon"].mean()),
+            "zoom": 10,
+            "pitch": 0,
+        }
+        st.pydeck_chart(pdk.Deck(layers=[deck_layer], initial_view_state=pdk.ViewState(**center)))
+    else:
+        st.info("Map view will appear when georeferenced coordinates are available.")
+
+with tab_targets:
+    st.subheader("Top ranked targets")
     if targets.empty:
         st.warning("No targets extracted.")
     else:
-        st.dataframe(targets, use_container_width=True, hide_index=True)
+        display_cols = [c for c in ["rank", "score", "x", "y", "lat", "lon"] if c in targets.columns]
+        st.dataframe(targets[display_cols], use_container_width=True, hide_index=True)
 
-        if pdk is not None:
-            scatter = pdk.Layer(
-                "ScatterplotLayer",
-                data=targets,
-                get_position="[x, y]",
-                get_radius=20,
-                get_fill_color=[255, 0, 0, 140],
-                pickable=True,
-            )
-            view_state = pdk.ViewState(
-                latitude=float(targets["y"].mean()),
-                longitude=float(targets["x"].mean()),
-                zoom=10,
-                pitch=0,
-            )
-            st.pydeck_chart(pdk.Deck(layers=[scatter], initial_view_state=view_state))
-        else:
-            st.info("pydeck not available; map visualization skipped.")
+        if {"lat", "lon"}.issubset(targets.columns):
+            if pdk is not None:
+                layer = pdk.Layer(
+                    "ScatterplotLayer",
+                    data=targets,
+                    get_position='[lon, lat]',
+                    get_radius=45,
+                    get_fill_color=[255, 0, 0, 160],
+                    pickable=True,
+                )
+                st.pydeck_chart(
+                    pdk.Deck(
+                        layers=[layer],
+                        initial_view_state=pdk.ViewState(
+                            latitude=float(targets["lat"].mean()),
+                            longitude=float(targets["lon"].mean()),
+                            zoom=9,
+                            pitch=0,
+                        ),
+                    )
+                )
 
-    st.subheader("Target logic")
-    st.write(
-        f"Structure strength: {structure['structure_strength']:.3f} | "
-        f"Pattern strength: {pattern['pattern_strength']:.3f} | "
-        f"Clay strength: {alteration['clay_strength']:.3f}"
-    )
+        st.subheader("Target logic notes")
+        st.write(f"Cluster count: {decision['cluster_count']}")
+        st.write(f"Confidence: {decision['confidence']:.3f}")
+        st.write(f"Depth band: {decision['depth_band']}")
+        st.write(f"Kill matrix: {decision['kill_reason']}")
 
-with tab4:
-    st.subheader("Exports")
-    if targets.empty:
-        st.info("No export available.")
-    else:
-        csv_bytes = targets.to_csv(index=False).encode("utf-8")
-        kml_text = generate_kml(targets)
-        json_text = json.dumps(
-            {"result": result, "targets": targets.to_dict(orient="records")},
-            indent=2,
-            ensure_ascii=False,
-        )
+with tab_export:
+    st.subheader("Export package")
 
-        st.download_button("Download targets CSV", csv_bytes, file_name="bouh_targets.csv", mime="text/csv")
+    export_payload = {
+        "meta": st.session_state.meta,
+        "decision": decision,
+        "targets": targets.to_dict(orient="records") if not targets.empty else [],
+        "indicator_table": analysis["indicators"].to_dict(orient="records"),
+        "timestamp": datetime.utcnow().isoformat() + "Z",
+    }
+
+    c1, c2, c3 = st.columns(3)
+
+    with c1:
         st.download_button(
-            "Download targets KML",
-            kml_text.encode("utf-8"),
-            file_name="bouh_targets.kml",
-            mime="application/vnd.google-earth.kml+xml",
-        )
-        st.download_button(
-            "Download analysis JSON",
-            json_text.encode("utf-8"),
+            "Download JSON",
+            data=json.dumps(export_payload, indent=2, ensure_ascii=False).encode("utf-8"),
             file_name="bouh_analysis.json",
             mime="application/json",
         )
+
+    with c2:
+        csv_bytes = targets.to_csv(index=False).encode("utf-8") if not targets.empty else b""
+        st.download_button(
+            "Download CSV",
+            data=csv_bytes,
+            file_name="bouh_targets.csv",
+            mime="text/csv",
+        )
+
+    with c3:
+        if not targets.empty:
+            kml_df = targets.copy()
+            if "lat" not in kml_df.columns:
+                kml_df["lat"] = 0.0
+            if "lon" not in kml_df.columns:
+                kml_df["lon"] = 0.0
+            kml_text = make_kml(kml_df)
+            st.download_button(
+                "Download KML",
+                data=kml_text.encode("utf-8"),
+                file_name="bouh_targets.kml",
+                mime="application/vnd.google-earth.kml+xml",
+            )
+        else:
+            st.button("Download KML", disabled=True)
 
     st.subheader("Runtime metadata")
     st.json(
         {
             "source": st.session_state.source_name,
-            "bands": meta.get("bands"),
-            "width": meta.get("width"),
-            "height": meta.get("height"),
-            "crs": meta.get("crs"),
-            "timestamp": datetime.utcnow().isoformat() + "Z",
+            "kind": st.session_state.source_kind,
+            "width": st.session_state.meta.get("width"),
+            "height": st.session_state.meta.get("height"),
+            "bands": st.session_state.meta.get("bands"),
+            "crs": st.session_state.meta.get("crs"),
+            "last_run": datetime.utcnow().isoformat() + "Z",
         }
     )
 
-st.caption("BOUH SUPREME | Production-oriented exploratory GeoAI scaffold.")
+st.caption("BOUH SUPREME | Production-oriented GeoAI exploration scaffold")
