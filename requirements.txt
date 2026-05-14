@@ -1,7 +1,6 @@
-streamlit==1.57.0
-folium==0.20.0
-streamlit-folium==0.27.2
-earthengine-api
-numpy
+streamlit
 pandas
+numpy
+xgboost
 scikit-learn
+requests
