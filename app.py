@@ -1,3 +1,4 @@
+
 # -*- coding: utf-8 -*-
 """
 BOUH SUPREME - System Genesis V8.0
@@ -33,7 +34,7 @@ import pandas as pd
 import plotly.express as px
 import requests
 import streamlit as st
-from folium.plugins import Draw, Fullscreen, LatLngPopup, MeasureControl, MiniMap, MarkerCluster
+from folium.plugins import Draw, Fullscreen, MiniMap, MarkerCluster
 from reportlab.lib.pagesizes import A4
 from reportlab.pdfgen import canvas
 from shapely.geometry import Point, mapping
