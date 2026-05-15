@@ -223,20 +223,18 @@ def sovereign_gate() -> bool:
     st.markdown('<div class="sovereign-title">BOUH SUPREME | بوابة الدخول السيادي</div>', unsafe_allow_html=True)
     st.caption("Deep Sovereign Mode requires authentication.")
 
-    password = st.text_input("أدخل الرمز السيادي", type="password", placeholder="Sovereign Key")
-    if st.button("فتح المنظومة"):
-        if password == SOVEREIGN_PASSWORD:
-            st.session_state.sovereign_unlocked = True
-            st.session_state.profile = DEVELOPER_PROFILE
-            st.rerun()
-        else:
-            st.error("رمز غير صحيح.")
-    return False
+password = st.text_input(
+    "أدخل الرمز السيادي",
+    type="password"
+)
 
+if password == "Abuaziza2000":
+    st.session_state["auth"] = True
 
-if not sovereign_gate():
+if st.session_state.get("auth", False):
+    st.success("✅ تم فتح المنظومة السيادية")
+else:
     st.stop()
-
 
 # ============================================================
 # ENGINE FUNCTIONS
